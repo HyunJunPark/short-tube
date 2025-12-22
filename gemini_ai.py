@@ -96,6 +96,43 @@ class GeminiSummaryAI(SummaryAI):
         except Exception as e:
             return f"오디오 AI 분석 중 에러: {str(e)}"
 
+    def generate_briefing(self, summaries: list, keywords: list) -> str:
+        """여러 요약본을 바탕으로 종합 브리핑을 생성합니다."""
+        if not summaries:
+            return "오늘 생성된 요약이 없습니다. 영상 목록에서 요약을 먼저 진행해주세요."
+        
+        # 요약본들을 텍스트로 합침
+        context = ""
+        for i, s in enumerate(summaries):
+            title = s.get('title', '제목 없음')
+            content = s.get('content', '')
+            channel = s.get('channel_name', '알 수 없는 채널')
+            context += f"[{i+1}] 영상 제목: {title} (채널: {channel})\n요약 내용: {content}\n\n"
+        
+        keyword_str = ", ".join(keywords) if keywords else "IT/기술 트렌드"
+        prompt = f"""
+        당신은 IT 트렌드 분석가이자 요약 비서입니다. 
+        제공된 여러 개의 유튜브 영상 요약본들을 바탕으로, 오늘의 핵심 내용을 갈무리하는 '데일리 브리핑'을 작성해주세요.
+        관심 키워드: [{keyword_str}]
+        
+        [브리핑 규칙]
+        1. 반드시 한국어로 작성하세요.
+        2. '오늘의 주요 트렌드'를 한 문장으로 먼저 제시하세요.
+        3. 그 후 주요 이슈별로 묶어서 상세 내용을 기술하세요.
+        4. 각 이슈의 끝에는 관련 영상 번호(예: [1], [2])를 기재하세요.
+        5. 마지막에 이 정보들이 사용자에게 주는 인사이트나 시사점을 1문장으로 덧붙이세요.
+        6. 말투는 신뢰감 있고 전문적인 어휘를 사용하세요.
+
+        [요약 데이터]
+        {context}
+        """
+        
+        try:
+            response = self._get_model_response(prompt)
+            return response.text.strip()
+        except Exception as e:
+            return f"데일리 브리핑 생성 중 오류 발생: {str(e)}"
+
 # 테스트용 코드 (직접 실행 시)
 if __name__ == "__main__":
     # .env 파일이 있고 API 키가 설정되어 있어야 함

@@ -146,7 +146,7 @@ def main():
             st.success("설정이 저장되었습니다!")
 
     # --- Main Navigation ---
-    tab1, tab2 = st.tabs(["🏠 대시보드", "📚 요약 기록 아카이브"])
+    tab1, tab2, tab3 = st.tabs(["🏠 대시보드", "📅 데일리 브리핑", "📚 요약 기록 아카이브"])
     
     with tab1:
         # --- Main Dashboard ---
@@ -243,7 +243,14 @@ def main():
                                         except:
                                             date_str = "일시 미확인"
                                     
-                                    caption_text = f"📅 {date_str}  |  ⏱ {vid.get('duration', '00:00')}  |  💬 {'자막 있음' if vid.get('has_caption') else '자막 없음'}"
+                                    if vid.get("has_caption") is True:
+                                        cap_info = "자막 있음"
+                                    elif vid.get("has_caption") is False:
+                                        cap_info = "자막 없음"
+                                    else:
+                                        cap_info = "자막 확인필요" # RSS 등 상태 미확인 시
+                                        
+                                    caption_text = f"📅 {date_str}  |  ⏱ {vid.get('duration', '00:00')}  |  💬 {cap_info}"
                                     st.markdown(f"<div style='margin-left: 25px; margin-top: -15px; margin-bottom: 5px;'><small style='color: gray;'>{caption_text}</small></div>", unsafe_allow_html=True)
                                     
                                     # 0. 캐시 확인
@@ -261,11 +268,15 @@ def main():
                                                 handler = YouTubeHandler()
                                                 ai = GeminiSummaryAI()
                                                 summary = None
-                                                if vid.get("has_caption"):
+                                                
+                                                # 자막 시도 (상태가 True거나 None인 경우)
+                                                if vid.get("has_caption") is not False:
                                                     transcript = handler.get_transcript(vid['id'])
-                                                    if "자막을 찾을 수 없거나" not in transcript:
+                                                    # 에러 메시지가 포함되어 있지 않은 경우에만 요약 진행
+                                                    if "자막을 찾을 수 없거나" not in transcript and "자막 추출 오류" not in transcript:
                                                         summary = ai.summarize(transcript, sub["tags"])
                                                 
+                                                # 자막이 없거나 실패한 경우 오디오 분석으로 폴백
                                                 if not summary:
                                                     audio_file = handler.download_audio(vid['id'])
                                                     if audio_file:
@@ -302,6 +313,56 @@ def main():
             st.info("💡 팁: 각 채널별로 관심 있는 키워드를 태그로 등록하세요. 해당 키워드가 포함된 영상만 요약됩니다.")
 
     with tab2:
+        st.subheader("📅 AI 데일리 브리핑")
+        st.markdown("오늘 생성된 여러 영상의 요약본들을 하나로 갈무리하여 핵심 트렌드 리포트를 생성합니다.")
+        
+        day_col1, day_col2 = st.columns([1, 2])
+        target_date = day_col1.date_input("날짜 선택", datetime.now())
+        target_date_str = target_date.strftime("%Y-%m-%d")
+
+        all_summaries = load_summaries()
+        daily_summaries = []
+        for key, data in all_summaries.items():
+            if isinstance(data, dict) and "date" in data:
+                if data["date"].startswith(target_date_str) and not key.startswith("BRIEFING_"):
+                    daily_summaries.append(data)
+        
+        if not daily_summaries:
+            st.info(f"💡 {target_date_str}에 생성된 요약 정보가 없습니다. 대시보드에서 영상을 먼저 요약해주세요.")
+        else:
+            with st.container(border=True):
+                st.write(f"✅ 총 **{len(daily_summaries)}개**의 요약본이 준비되어 있습니다.")
+                
+                # 관심 태그 수집
+                all_tags = []
+                for sub in st.session_state.data["subscriptions"]:
+                    all_tags.extend(sub.get("tags", []))
+                unique_tags = list(set(all_tags))
+                
+                if st.button("✨ 오늘의 브리핑 생성하기", type="primary", use_container_width=True):
+                    with st.spinner("전문 AI 분석가가 전체 내용을 파악하여 브리핑을 작성 중입니다..."):
+                        ai = GeminiSummaryAI()
+                        briefing = ai.generate_briefing(daily_summaries, unique_tags)
+                        # 브리핑 저장 (캐시용)
+                        save_summary(f"BRIEFING_{target_date_str}", ["briefing"], briefing, f"{target_date_str} 데일리 브리핑", "System")
+                        st.rerun()
+
+            # 표시 (캐시에서 로드)
+            stored_briefing = get_cached_summary(f"BRIEFING_{target_date_str}", ["briefing"])
+            if stored_briefing:
+                st.markdown("---")
+                st.markdown(f"### 📋 {target_date_str} 데일리 브리핑 리포트")
+                with st.container(border=True):
+                    st.markdown(stored_briefing)
+                    
+                st.download_button("📥 브리핑 리포트 저장 (TXT)", stored_briefing, file_name=f"briefing_{target_date_str}.txt")
+            
+            st.divider()
+            with st.expander("📑 브리핑에 참조된 개별 요약 목록", expanded=False):
+                for item in daily_summaries:
+                    st.markdown(f"- **{item['title']}** ({item['channel_name']})")
+
+    with tab3:
         st.subheader("📚 요약 기록 검색 및 관리")
         
         all_summaries = load_summaries()
@@ -321,6 +382,8 @@ def main():
             # 데이터 정렬 및 필터링
             display_items = []
             for key, val in all_summaries.items():
+                if key.startswith("BRIEFING_"): continue # 브리핑은 아카이브에서 제외하거나 별도 표시
+                
                 if not isinstance(val, dict):
                     # 하위 호환: 이전 데이터는 최소 정보로 변환
                     val = {

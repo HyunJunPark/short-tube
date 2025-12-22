@@ -1,5 +1,6 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
+import yt_dlp
 import os
 import requests
 import xml.etree.ElementTree as ET
@@ -245,7 +246,7 @@ class YouTubeHandler:
                             "id": video_id,
                             "title": title,
                             "published_at": published_str,
-                            "has_caption": True, # RSS로는 확인 불가하므로 우선 True (Summary 시도 시 체크)
+                            "has_caption": None, # RSS로는 확인 불가하므로 None(알 수 없음) 표시
                             "duration": "00:00"   # RSS로는 확인 불가
                         })
                 except Exception:
