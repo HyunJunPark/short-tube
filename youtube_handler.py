@@ -1,7 +1,8 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
-import yt_dlp
 import os
+import requests
+import xml.etree.ElementTree as ET
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
@@ -186,31 +187,73 @@ class YouTubeHandler:
                     
                     return filtered_videos
                 
-                return videos
+                return []
             except Exception as e:
-                print(f"YouTube API get_recent_videos 오류: {e}")
-
-        # yt-dlp 폴백 (비교적 느림)
-        try:
-            ydl_opts = {'quiet': True, 'extract_flat': True}
-            url = f"https://www.youtube.com/channel/{channel_id}/videos"
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                cutoff = datetime.now() - timedelta(days=days)
+                error_msg = str(e)
+                # 할당량 초과(Quota Exceeded) 등 API 에러 시 RSS로 대체 시도
+                if "quota" in error_msg.lower() or "403" in error_msg:
+                    # 사용자에게 혼란을 주는 긴 에러 로그 대신 깔끔한 안내 출력
+                    print(f"ℹ️ YouTube API 할당량이 부족하여 RSS 피드로 자동 전환합니다. (채널: {channel_id})")
+                    return YouTubeHandler._get_videos_via_rss(channel_id, days)
                 
-                for entry in info.get('entries', []):
-                    # yt-dlp의 upload_date는 'YYYYMMDD' 형식
-                    upload_date_str = entry.get('upload_date')
-                    if upload_date_str:
-                        upload_date = datetime.strptime(upload_date_str, '%Y%m%dd') # 예외처리 필요할수도
-                        # 간단하게 며칠 전인지만 확인
-                    videos.append({
-                        "id": entry.get('id'),
-                        "title": entry.get('title'),
-                        "published_at": upload_date_str
-                    })
-                return videos[:10]
-        except:
+                print(f"❌ YouTube API get_recent_videos 오류: {error_msg}")
+                return []
+        else:
+            # 설정된 youtube client가 없는 경우에도 RSS 시도
+            return YouTubeHandler._get_videos_via_rss(channel_id, days)
+
+    @staticmethod
+    def _get_videos_via_rss(channel_id: str, days: int = 7) -> list:
+        """
+        RSS 피드를 통해 최근 영상 목록을 가져옵니다. (API 할당량을 사용하지 않음)
+        """
+        videos = []
+        try:
+            url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+            response = requests.get(url, timeout=10)
+            if response.status_code != 200:
+                return []
+            
+            root = ET.fromstring(response.content)
+            # 네임스페이스 정의
+            ns = {
+                'atom': 'http://www.w3.org/2005/Atom',
+                'yt': 'http://www.youtube.com/xml/schemas/2015',
+                'media': 'http://search.yahoo.com/mrss/'
+            }
+            
+            threshold_date = datetime.utcnow() - timedelta(days=days)
+            
+            for entry in root.findall('atom:entry', ns):
+                video_id_elem = entry.find('yt:videoId', ns)
+                title_elem = entry.find('atom:title', ns)
+                published_elem = entry.find('atom:published', ns)
+                
+                if video_id_elem is None or title_elem is None or published_elem is None:
+                    continue
+                    
+                video_id = video_id_elem.text
+                title = title_elem.text
+                published_str = published_elem.text
+                
+                # RSS 날짜 형식: 2023-12-22T14:30:00+00:00
+                try:
+                    published_at = datetime.fromisoformat(published_str.replace('Z', '+00:00'))
+                    # 시간대 정보 제거 후 비교
+                    if published_at.replace(tzinfo=None) > threshold_date:
+                        videos.append({
+                            "id": video_id,
+                            "title": title,
+                            "published_at": published_str,
+                            "has_caption": True, # RSS로는 확인 불가하므로 우선 True (Summary 시도 시 체크)
+                            "duration": "00:00"   # RSS로는 확인 불가
+                        })
+                except Exception:
+                    continue
+            
+            return videos
+        except Exception as e:
+            print(f"RSS 피드 가져오기 실패: {e}")
             return []
 
     @staticmethod

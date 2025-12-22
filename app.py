@@ -67,12 +67,19 @@ def apply_custom_css():
     st.markdown("""
         <style>
         .stButton>button {
-            border-radius: 10px;
-            margin-top: 28px !important; /* 익스팬더 타이틀 높이에 맞춤 */
+            border-radius: 8px;
+            padding: 4px 12px !important; /* 패딩을 텍스트에 딱 맞게 조정 */
+            min-height: auto !important;
+            height: auto !important;
+            margin-top: 28px !important;
         }
-        /* 요약/목록 내 버튼들은 마진 제외 */
+        /* 요약/목록 내 버튼들은 마진 제외 및 너비 통일 */
         .stExpander .stButton>button {
             margin-top: 0px !important;
+            white-space: nowrap !important; /* 글자 줄바꿈 방지 */
+            justify-content: center !important;
+            text-align: center !important;
+            width: 100% !important;
         }
         .tag-chip {
             display: inline-block;
@@ -220,8 +227,8 @@ def main():
                                 st.write("오른쪽 🔄 버튼을 눌러 목록을 불러오세요.")
                             else:
                                 for vid in video_list:
-                                    # 1. 제목과 버튼을 위한 첫 번째 줄 (타이틀 정중앙 정렬)
-                                    v_col_title, v_col_btn1, v_col_btn2 = st.columns([10, 1.5, 1], vertical_alignment="center")
+                                    # 버튼이 겹치지 않도록 컬럼 비율을 조정하고 간격을 확보 ([7, 1.5, 1.5])
+                                    v_col_title, v_col_btn1, v_col_btn2 = st.columns([7, 1.5, 1.5], vertical_alignment="center", gap="medium")
                                     
                                     with v_col_title:
                                         st.markdown(f"**🔹 {vid['title']}**")
@@ -270,7 +277,7 @@ def main():
                                                     st.rerun()
                                     
                                     # 영상 보기 버튼
-                                    v_col_btn2.link_button("보기", f"https://www.youtube.com/watch?v={vid['id']}", use_container_width=True)
+                                    v_col_btn2.link_button("영상링크", f"https://www.youtube.com/watch?v={vid['id']}", use_container_width=True)
 
                         # Action Buttons (Delete / Toggle)
                         c1, c2, _ = st.columns([1, 1, 4])
