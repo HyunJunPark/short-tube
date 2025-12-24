@@ -6,28 +6,14 @@ from youtube_handler import YouTubeHandler
 from gemini_ai import GeminiSummaryAI
 from notifier import TelegramNotifier
 
-DATA_FILE = "data.json"
-SUMMARIES_FILE = "summaries.json"
+from data_manager import (
+    load_data, save_data, load_summaries, save_summary, 
+    get_cached_summary, get_summaries_for_date
+)
 
-def load_json(file_path):
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-def save_json(file_path, data):
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def get_cached_summary(video_id, tags):
-    summaries = load_json(SUMMARIES_FILE)
-    tag_key = ",".join(sorted(tags)) if tags else "none"
-    cache_key = f"{video_id}_{tag_key}"
-    return summaries.get(cache_key)
-
-def run_monitoring():
+def run_monitoring(send_briefing=False):
     print(f"[{datetime.now()}] 모니터링 시작...")
-    data = load_json(DATA_FILE)
+    data = load_data()
     
     # 텔레그램 설정 가져오기
     user_settings = data.get("user_settings", {})
@@ -39,13 +25,13 @@ def run_monitoring():
     notifier = TelegramNotifier(token, chat_id)
     
     updated = False
+    new_summaries_today = []
     
     for sub in data.get("subscriptions", []):
         if not sub.get("is_active"):
             continue
             
         print(f"채널 체크 중: {sub['channel_name']}")
-        # 최근 영상 목록 가져오기 (충분한 범위를 위해 days=2 설정)
         videos = handler.get_recent_videos(sub['channel_id'], days=2)
         
         if not videos:
@@ -55,52 +41,29 @@ def run_monitoring():
         last_id = sub.get("last_processed_video")
         now = datetime.utcnow()
         
-        # 마지막으로 본 영상 이후이며, 24시간 이내인 영상들 찾기
         for vid in videos:
             if vid['id'] == last_id:
                 break
-                
-            # 시간 형식 파싱 (예: 2025-12-22T14:30:00Z)
             published_at_str = vid.get("published_at", "")
             if published_at_str:
                 try:
-                    # ISO 8601 형식 파싱
                     published_at = datetime.strptime(published_at_str.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
-                    time_diff = now - published_at
-                    
-                    # 24시간(86400초) 이내인 영상만 추가
-                    if time_diff.total_seconds() <= 86400:
+                    if (now - published_at).total_seconds() <= 86400:
                         new_videos.append(vid)
                     else:
-                        # 리스트는 최신순이므로, 한 번 24시간을 넘어가면 그 이전 영상들은 볼 필요 없음
                         break
-                except Exception as pe:
-                    print(f"시간 파싱 에러 ({vid['title']}): {pe}")
+                except: continue
             
         if not new_videos:
             continue
             
-        # 최신순이므로 뒤집어서 오래된 것부터 처리
         for vid in reversed(new_videos):
             print(f"  새 영상 발견: {vid['title']}")
-            
-            # 1. 캐시 확인
             summary = get_cached_summary(vid['id'], sub["tags"])
             
-            # 2. 캐시 없으면 요약 생성
             if not summary:
-                # 자막 시도
-                transcript = handler.get_transcript(vid['id'])
-                if "자막을 찾을 수 없거나" not in transcript or vid.get("has_caption"):
-                    summary = ai.summarize(transcript, sub["tags"])
-                
-                # 자막 실패 시 오리에 분석 (선택 사항 - 여기서는 안정성을 위해 자막 위주로)
-                if not summary:
-                    audio_file = handler.download_audio(vid['id'])
-                    if audio_file:
-                        summary = ai.summarize_audio(audio_file, sub["tags"])
-                        if os.path.exists(audio_file):
-                            os.remove(audio_file)
+                # 통합 요약 로직 사용 (자막 실패 시 자동으로 오디오 분석)
+                summary = ai.get_summary_with_fallback(handler, vid['id'], sub["tags"])
             
             if summary:
                 # 텔레그램 알림 발송
@@ -111,10 +74,9 @@ def run_monitoring():
                 message += f"🔗 [영상 보기](https://www.youtube.com/watch?v={vid['id']})"
                 
                 if notifier.send_message(message):
-                    # 성공 시 캐시 및 아카이브 저장
-                    summaries = load_json(SUMMARIES_FILE)
-                    tag_key = ",".join(sorted(sub["tags"])) if sub["tags"] else "none"
-                    summaries[f"{vid['id']}_{tag_key}"] = {
+                    # 성공 시 캐시 저장
+                    save_summary(vid['id'], sub["tags"], summary, vid['title'], sub['channel_name'])
+                    entry = {
                         "content": summary,
                         "title": vid['title'],
                         "channel_name": sub['channel_name'],
@@ -122,18 +84,71 @@ def run_monitoring():
                         "tags": sub['tags'],
                         "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
-                    save_json(SUMMARIES_FILE, summaries)
+                    new_summaries_today.append(entry)
                     
                     sub["last_processed_video"] = vid['id']
                     updated = True
-                    # 연속 발송 시 텔레그램 제한 방지를 위해 잠시 대기
                     time.sleep(2)
 
     if updated:
-        save_json(DATA_FILE, data)
+        save_data(data)
         print("상태 업데이트 완료.")
     else:
         print("새로운 대상 영상이 없습니다.")
 
+    # 데일리 브리핑 발송 (설정된 시간에만 호출됨)
+    if send_briefing:
+        print("데일리 브리핑 생성 및 발송 중...")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        daily_list = get_summaries_for_date(today_str)
+        
+        if daily_list:
+            all_tags = []
+            for sub in data.get("subscriptions", []):
+                all_tags.extend(sub.get("tags", []))
+            unique_tags = list(set(all_tags))
+            
+            briefing = ai.generate_briefing(daily_list, unique_tags)
+            if briefing:
+                briefing_msg = f"📅 *오늘의 AI 커스텀 브리핑 ({today_str})*\n\n{briefing}"
+                if notifier.send_message(briefing_msg):
+                    print("데일리 브리핑 발송 완료.")
+                    # 브리핑 캐시 저장
+                    save_summary(f"BRIEFING_{today_str}", ["briefing"], briefing, f"{today_str} 데일리 브리핑", "System")
+
+def main():
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--once":
+        run_monitoring(send_briefing=True)
+        return
+
+    print("🚀 모니터링 서비스가 시작되었습니다. (매 1분마다 시간 체크)")
+    last_run_date = ""
+
+    while True:
+        try:
+            data = load_data()
+            user_settings = data.get("user_settings", {})
+            notif_time = user_settings.get("notification_time", "09:00")
+            
+            now = datetime.now()
+            current_time_str = now.strftime("%H:%M")
+            current_date_str = now.strftime("%Y-%m-%d")
+
+            # 설정된 시간이 됐고, 오늘 아직 실행하지 않았다면
+            if current_time_str == notif_time and last_run_date != current_date_str:
+                print(f"[{now}] 예약된 시간이 되어 모니터링 및 브리핑을 시작합니다.")
+                run_monitoring(send_briefing=True)
+                last_run_date = current_date_str
+            
+            # 1분 대기
+            time.sleep(60)
+        except KeyboardInterrupt:
+            print("\n서비스를 종료합니다.")
+            break
+        except Exception as e:
+            print(f"루프 실행 중 에러 발생: {e}")
+            time.sleep(60)
+
 if __name__ == "__main__":
-    run_monitoring()
+    main()

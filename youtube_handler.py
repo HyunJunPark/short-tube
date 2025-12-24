@@ -18,24 +18,19 @@ class YouTubeHandler:
         지원되는 언어: 한국어(ko), 영어(en)
         """
         try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            
-            # 1순위: 한국어 수동 자막
-            # 2순위: 한국어 자동 생성 자막
-            # 3순위: 영어 자막 (번역 가능 여부 확인)
+            # 1순위: 한국어 자막 시도 (수동/자동 포함)
             try:
-                transcript = transcript_list.find_transcript(['ko'])
+                data = YouTubeTranscriptApi.get_transcript(video_id, languages=['ko'])
             except:
+                # 2순위: 영어 자막 시도
                 try:
-                    transcript = transcript_list.find_generated_transcript(['ko'])
+                    data = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
                 except:
-                    # 번역 시도 (영어를 한국어로)
-                    try:
-                        transcript = transcript_list.find_transcript(['en']).translate('ko')
-                    except:
-                        transcript = transcript_list.find_transcript(['en'])
+                    # 3순위: 전체 리스트에서 찾기 (폴백)
+                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                    transcript = transcript_list.find_transcript(['ko', 'en'])
+                    data = transcript.fetch()
             
-            data = transcript.fetch()
             return " ".join([item['text'] for item in data])
         
         except (NoTranscriptFound, TranscriptsDisabled):

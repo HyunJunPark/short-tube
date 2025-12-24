@@ -85,7 +85,7 @@ class GeminiSummaryAI(SummaryAI):
             
             # 3. 분석 요청
             keyword_str = ", ".join(keywords) if keywords else "전체 내용"
-            prompt = f"제공된 오디오의 내용을 분석해서 [{keyword_str}] 키워드 중심으로 3줄 요약해줘. 한국어로 작성해."
+            prompt = f"제공된 오디오의 내용을 분석해서 [{keyword_str}] 키워드 중심으로 요약해줘. 한국어로 작성해."
             
             response = self._get_model_response([audio_file, prompt])
             
@@ -95,6 +95,41 @@ class GeminiSummaryAI(SummaryAI):
             return response.text.strip()
         except Exception as e:
             return f"오디오 AI 분석 중 에러: {str(e)}"
+
+    def get_summary_with_fallback(self, handler, video_id: str, tags: list) -> str:
+        """자막 추출을 우선 시도하고, 실패 시 오디오 분석(LLM)으로 자동 전환하는 통합 로직"""
+        print(f"    [AI] '{video_id}' 요약 프로세스 시작...")
+        
+        # 1. 자막 시도
+        transcript = handler.get_transcript(video_id)
+        
+        # 자막 유효성 검사 (에러 메시지 키워드 다중 체크)
+        error_keywords = ["자막을 찾을 수 없거나", "자막 추출 오류", "자막이 존재하지 않습니다", "TranscriptsDisabled"]
+        is_valid_transcript = transcript and not any(kw in transcript for kw in error_keywords)
+        
+        if is_valid_transcript:
+            print(f"    [AI] 자막 요약 시도 중...")
+            summary = self.summarize(transcript, tags)
+            # AI가 오류를 요약했을 가능성 대비 (친절한 AI의 답변 내용 체크)
+            if summary and "자막 추출 오류" not in summary:
+                return summary
+            print(f"    [AI] 자막 요약 결과가 부정확함. 오디오 분석으로 전환.")
+
+        # 2. 오디오 분석 폴백
+        print(f"    [AI] 오디오 분석(LLM)으로 전환 중 (비용 발생)...")
+        audio_file = handler.download_audio(video_id)
+        if audio_file:
+            try:
+                summary = self.summarize_audio(audio_file, tags)
+                if os.path.exists(audio_file):
+                    os.remove(audio_file)
+                return summary
+            except Exception as e:
+                if os.path.exists(audio_file):
+                    os.remove(audio_file)
+                return f"통합 분석 실패: {str(e)}"
+        
+        return "자막 및 오디오 분석에 모두 실패했습니다."
 
     def generate_briefing(self, summaries: list, keywords: list) -> str:
         """여러 요약본을 바탕으로 종합 브리핑을 생성합니다."""
@@ -122,6 +157,8 @@ class GeminiSummaryAI(SummaryAI):
         4. 각 이슈의 끝에는 관련 영상 번호(예: [1], [2])를 기재하세요.
         5. 마지막에 이 정보들이 사용자에게 주는 인사이트나 시사점을 1문장으로 덧붙이세요.
         6. 말투는 신뢰감 있고 전문적인 어휘를 사용하세요.
+        7. 절대로 추론하지 말고 반드시 제공된 데이터만 기반으로 작성하세요.
+        8. 최대 1000 자는 넘기지 않습니다.
 
         [요약 데이터]
         {context}

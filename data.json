@@ -1,7 +1,7 @@
 {
   "user_settings": {
     "notification_time": "08:00",
-    "target_platform": "Slack",
+    "target_platform": "Telegram",
     "telegram_token": "",
     "telegram_chat_id": ""
   },
@@ -10,14 +10,14 @@
       "channel_id": "UCQNE2JmbasNYbjGAcuBiRRg",
       "channel_name": "조코딩 JoCoding",
       "tags": [],
-      "last_processed_video": "j-ju2cqS2NI",
+      "last_processed_video": "v4diAe9cEP8",
       "is_active": true
     },
     {
       "channel_id": "UCxZ2AlaT0hOmxzZVbF_j_Sw",
       "channel_name": "코드팩토리",
       "tags": [],
-      "last_processed_video": "v53dwKYRp9w",
+      "last_processed_video": "gC6kwTlH22s",
       "is_active": true
     },
     {
