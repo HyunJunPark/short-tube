@@ -722,7 +722,7 @@ def render_add_channel_section():
 def render_channel_card(sub, idx):
     """개별 채널 카드 렌더링"""
     # All gray color for headers
-    color = {"name": "gray", "hex": "#C9D1D9", "rgba": "201, 209, 217"}
+    color = {"name": "white", "hex": "#FFFFFF", "rgba": "255, 255, 255"}
     
     with st.container(border=True):
         # Header Row: Channel Info (Left) + Toggle Switch (Right)
@@ -814,7 +814,7 @@ def render_video_list(sub):
         with st.container(border=True):
             v_col_title, v_col_btn1, v_col_btn2 = st.columns([7, 1.5, 1.5], vertical_alignment="center", gap="small")
             with v_col_title:
-                st.markdown(f"<p style='color: #C9D1D9; font-weight: 700; margin-bottom: 0.25rem;'>🎬 {vid['title']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='color: #FFFFFF !important; font-size: 1rem; font-weight: 700; margin: 0 0 0.25rem 0; padding: 0; line-height: 1.4;'>🎬 {vid['title']}</h4>", unsafe_allow_html=True)
                 
                 # Metadata no neon
                 pub_date = vid.get("published_at", "")
