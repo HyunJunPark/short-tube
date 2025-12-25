@@ -1,6 +1,6 @@
 {
   "user_settings": {
-    "notification_time": "22:15",
+    "notification_time": "21:30",
     "target_platform": "Telegram",
     "telegram_token": "",
     "telegram_chat_id": ""
@@ -9,7 +9,10 @@
     {
       "channel_id": "UCQNE2JmbasNYbjGAcuBiRRg",
       "channel_name": "조코딩 JoCoding",
-      "tags": [],
+      "tags": [
+        "ChatGPT",
+        "부동산"
+      ],
       "last_processed_video": "v4diAe9cEP8",
       "is_active": true
     },
