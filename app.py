@@ -7,7 +7,8 @@ from gemini_ai import GeminiSummaryAI
 from youtube_handler import YouTubeHandler
 from data_manager import (
     load_data, save_data, load_summaries, save_summary, 
-    get_cached_summary, get_summaries_for_date
+    get_cached_summary, get_summaries_for_date,
+    load_video_cache, save_video_cache
 )
 
 load_dotenv()
@@ -189,7 +190,9 @@ def render_channel_card(sub, idx):
             if st.button("🔄", key=f"refresh_{sub['channel_id']}"):
                 with st.spinner(""):
                     handler = YouTubeHandler()
-                    st.session_state.video_lists[sub['channel_id']] = handler.get_recent_videos(sub['channel_id'])
+                    videos = handler.get_recent_videos(sub['channel_id'])
+                    st.session_state.video_lists[sub['channel_id']] = videos
+                    save_video_cache(st.session_state.video_lists)
                 st.rerun()
 
         with expander:
@@ -198,6 +201,8 @@ def render_channel_card(sub, idx):
         # Action Buttons
         c1, c2, _ = st.columns([1, 1, 4])
         if c1.button("🗑️ 채널 삭제", key=f"del_{sub['channel_id']}"):
+            st.session_state.video_lists.pop(sub['channel_id'], None)
+            save_video_cache(st.session_state.video_lists)
             st.session_state.data["subscriptions"].pop(idx)
             save_data(st.session_state.data)
             st.rerun()
@@ -328,7 +333,7 @@ def main():
     if 'data' not in st.session_state:
         st.session_state.data = load_data()
     if 'video_lists' not in st.session_state:
-        st.session_state.video_lists = {}
+        st.session_state.video_lists = load_video_cache()
 
     st.title("📹 유튜브 키워드 모니터링 & AI 요약 비서")
     

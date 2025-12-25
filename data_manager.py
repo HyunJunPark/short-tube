@@ -4,6 +4,7 @@ from datetime import datetime
 
 DATA_FILE = "data.json"
 SUMMARIES_FILE = "summaries.json"
+VIDEO_CACHE_FILE = "video_cache.json"
 
 def load_data():
     """사용자 설정 및 구독 정보를 로드합니다."""
@@ -49,6 +50,16 @@ def save_summary(video_id, tags, content, title="", channel_name=""):
     with open(SUMMARIES_FILE, "w", encoding="utf-8") as f:
         json.dump(summaries, f, indent=2, ensure_ascii=False)
 
+def get_summaries_for_date(target_date_str):
+    """특정 날짜(YYYY-MM-DD)에 생성된 요약 목록을 반환합니다 (브리핑용)."""
+    all_summaries = load_summaries()
+    daily_summaries = []
+    for key, data in all_summaries.items():
+        if isinstance(data, dict) and "date" in data:
+            if data["date"].startswith(target_date_str) and not key.startswith("BRIEFING_"):
+                daily_summaries.append(data)
+    return daily_summaries
+
 def get_cached_summary(video_id, tags):
     """캐시된 요약 텍스트를 반환합니다."""
     summaries = load_summaries()
@@ -59,12 +70,15 @@ def get_cached_summary(video_id, tags):
         return data.get("content")
     return data # 하위 호환용
 
-def get_summaries_for_date(target_date_str):
-    """특정 날짜(YYYY-MM-DD)에 생성된 요약 목록을 반환합니다 (브리핑용)."""
-    all_summaries = load_summaries()
-    daily_summaries = []
-    for key, data in all_summaries.items():
-        if isinstance(data, dict) and "date" in data:
-            if data["date"].startswith(target_date_str) and not key.startswith("BRIEFING_"):
-                daily_summaries.append(data)
-    return daily_summaries
+
+def load_video_cache():
+    """저장된 채널별 영상 목록 캐시를 로드합니다."""
+    if os.path.exists(VIDEO_CACHE_FILE):
+        with open(VIDEO_CACHE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_video_cache(video_cache):
+    """채널별 영상 목록 캐시를 저장합니다."""
+    with open(VIDEO_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(video_cache, f, indent=2, ensure_ascii=False)
