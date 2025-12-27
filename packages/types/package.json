@@ -1,0 +1,17 @@
+{
+  "name": "@short-tube/types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for short-tube",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

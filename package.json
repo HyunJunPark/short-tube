@@ -1,0 +1,36 @@
+{
+  "name": "short-tube",
+  "version": "2.0.0",
+  "description": "YouTube monitoring and AI summarization service",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "start": "npm run start --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "server:dev": "npm run dev -w apps/server",
+    "server:build": "npm run build -w apps/server",
+    "server:start": "npm run start -w apps/server",
+    "web:dev": "npm run dev -w apps/web",
+    "web:build": "npm run build -w apps/web",
+    "web:start": "npm run start -w apps/web",
+    "types:build": "npm run build -w packages/types"
+  },
+  "keywords": [
+    "youtube",
+    "ai",
+    "summarization",
+    "gemini",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
