@@ -1,7 +1,0 @@
-streamlit
-youtube-transcript-api
-yt-dlp
-fastapi
-uvicorn
-google-generativeai
-python-dotenv
