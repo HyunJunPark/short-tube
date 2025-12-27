@@ -1,11 +1,18 @@
 import fs from 'fs/promises';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables early
+dotenv.config();
 
 export class FileStorage {
   private dataDir: string;
 
   constructor(dataDir?: string) {
-    this.dataDir = dataDir || process.env.DATA_DIR || path.join(__dirname, '../../../data');
+    const rawDir = dataDir || process.env.DATA_DIR || path.join(__dirname, '../../../data');
+    // Resolve relative paths based on current working directory
+    this.dataDir = path.isAbsolute(rawDir) ? rawDir : path.resolve(process.cwd(), rawDir);
+    console.log('[FileStorage] Using data directory:', this.dataDir);
   }
 
   async ensureDir(): Promise<void> {

@@ -3,8 +3,8 @@ import path from 'path';
 import { createApp } from './app';
 import { scheduler } from './scheduler';
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Load environment variables from apps/server/.env
+dotenv.config();
 
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
