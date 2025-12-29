@@ -157,19 +157,24 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
 export function VideoList({ videos, channelTags }: VideoListProps) {
   const [displayCount, setDisplayCount] = useState(2)
 
-  if (videos.length === 0) {
+  // Sort videos by published date (newest first)
+  const sortedVideos = [...videos].sort((a, b) => {
+    return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+  })
+
+  if (sortedVideos.length === 0) {
     return (
       <div className="text-sm text-muted-foreground text-center py-8">
-        No videos found in the last 7 days
+        No videos found
       </div>
     )
   }
 
-  const visibleVideos = videos.slice(0, displayCount)
-  const hasMore = displayCount < videos.length
+  const visibleVideos = sortedVideos.slice(0, displayCount)
+  const hasMore = displayCount < sortedVideos.length
 
   const handleLoadMore = () => {
-    setDisplayCount(prev => Math.min(prev + 2, videos.length))
+    setDisplayCount(prev => Math.min(prev + 2, sortedVideos.length))
   }
 
   return (
@@ -180,7 +185,7 @@ export function VideoList({ videos, channelTags }: VideoListProps) {
           <VideoItem video={video} channelTags={channelTags} />
         </div>
       ))}
-      
+
       {hasMore && (
         <>
           <Separator className="my-4" />
@@ -190,7 +195,7 @@ export function VideoList({ videos, channelTags }: VideoListProps) {
               size="sm"
               onClick={handleLoadMore}
             >
-              Load More ({videos.length - displayCount} more)
+              Load More ({sortedVideos.length - displayCount} more)
             </Button>
           </div>
         </>

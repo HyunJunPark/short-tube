@@ -396,7 +396,9 @@ export class DataService {
     const now = new Date().toISOString();
 
     // Add cached_at timestamp to all videos
-    const videosWithTimestamp = videos.map(video => ({\n      ...video,\n      cached_at: now,
+    const videosWithTimestamp = videos.map(video => ({
+      ...video,
+      cached_at: now,
     }));
 
     // Merge with existing cache: keep old videos, add/update new ones
