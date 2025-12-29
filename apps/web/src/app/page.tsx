@@ -7,13 +7,16 @@ import { AddChannelForm } from '@/components/dashboard/AddChannelForm'
 import { ChannelCard } from '@/components/dashboard/ChannelCard'
 import { useSubscriptions } from '@/hooks/useSubscriptions'
 import { useSummaries } from '@/hooks/useSummaries'
+import { useVideoStats } from '@/hooks/useVideos'
 
 export default function Home() {
   const { data: subscriptions = [], isLoading: isLoadingSubscriptions } = useSubscriptions()
   const { data: allSummaries = [] } = useSummaries()
+  const { data: videoStats } = useVideoStats()
 
   const activeChannels = subscriptions.filter((s) => s.is_active).length
   const totalSummaries = allSummaries.length
+  const totalVideos = videoStats?.total_videos || 0
 
   return (
     <MainLayout title="Dashboard">
@@ -41,14 +44,9 @@ export default function Home() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {subscriptions.reduce((acc, sub) => {
-                  // This is a placeholder - in real app would count from video cache
-                  return acc
-                }, 0)}
-              </div>
+              <div className="text-2xl font-bold">{totalVideos}</div>
               <p className="text-xs text-muted-foreground">
-                Last 7 days
+                All time
               </p>
             </CardContent>
           </Card>

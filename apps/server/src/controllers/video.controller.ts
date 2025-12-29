@@ -42,6 +42,22 @@ export class VideoController {
       next(error);
     }
   }
+
+  async getStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const subscriptions = await dataService.getSubscriptions();
+      let totalVideos = 0;
+
+      for (const subscription of subscriptions) {
+        const videos = await dataService.getVideoCache(subscription.channel_id);
+        totalVideos += videos.length;
+      }
+
+      res.json({ success: true, data: { total_videos: totalVideos } });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const videoController = new VideoController();

@@ -30,3 +30,14 @@ export function useRefreshVideos() {
     },
   })
 }
+
+// Get video statistics (total videos count)
+export function useVideoStats() {
+  return useQuery({
+    queryKey: ['videos', 'stats'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ total_videos: number }>('/videos/stats')
+      return response.data
+    },
+  })
+}
