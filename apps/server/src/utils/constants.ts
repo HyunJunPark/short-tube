@@ -11,8 +11,8 @@ export const AVAILABLE_TAGS = [
 ] as const;
 
 export const GEMINI_MODELS = [
-  'gemini-2.0-flash',       // 1순위: Gemini 2.0 Flash (안정적)
-  'gemini-3-flash-preview', // 2순위: Gemini 3 Flash (프리뷰), 최신 & 가장 강력  
+  'gemini-3-flash-preview', // 1순위: Gemini 3 Flash (프리뷰), 최신 & 가장 강력  
+  'gemini-2.0-flash',       // 2순위: Gemini 2.0 Flash (안정적)
   'gemini-2.0-flash-lite',  // 3순위: Gemini 2.0 Flash Lite (경량)
   'gemini-1.5-flash',       // 4순위: Gemini 1.5 Flash (이전 버전)
 ] as const;
