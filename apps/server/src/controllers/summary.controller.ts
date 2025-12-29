@@ -5,11 +5,14 @@ import { geminiService } from '../services/gemini.service';
 export class SummaryController {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { search, channelName, date, limit, offset } = req.query;
+      const { search, channelName, year, month, day, limit, offset } = req.query;
 
       const summaries = await dataService.getAllSummaries({
         search: search as string,
         channelName: channelName as string,
+        year: year ? Number(year) : undefined,
+        month: month ? Number(month) : undefined,
+        day: day ? Number(day) : undefined,
         limit: limit ? Number(limit) : undefined,
         offset: offset ? Number(offset) : undefined,
       });

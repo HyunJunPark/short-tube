@@ -5,7 +5,14 @@ import { apiClient } from '@/lib/api-client'
 import type { Summary } from '@short-tube/types'
 
 // Get all summaries
-export function useSummaries(filters?: { tags?: string[]; dateFrom?: string; dateTo?: string }) {
+export function useSummaries(filters?: { 
+  tags?: string[]
+  dateFrom?: string
+  dateTo?: string
+  year?: number
+  month?: number
+  day?: number
+}) {
   return useQuery({
     queryKey: ['summaries', filters],
     queryFn: async () => {

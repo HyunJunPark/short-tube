@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Filter, ExternalLink, Loader2 } from 'lucide-react'
+import { Search, Filter, ExternalLink, Loader2, Calendar } from 'lucide-react'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSummaries } from '@/hooks/useSummaries'
 
 const AVAILABLE_TAGS = [
@@ -25,8 +26,15 @@ const AVAILABLE_TAGS = [
 export default function ArchivePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedYear, setSelectedYear] = useState<string>('')
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
+  const [selectedDay, setSelectedDay] = useState<string>('')
 
-  const { data: allSummaries = [], isLoading } = useSummaries()
+  const { data: allSummaries = [], isLoading } = useSummaries({
+    year: selectedYear ? Number(selectedYear) : undefined,
+    month: selectedMonth ? Number(selectedMonth) : undefined,
+    day: selectedDay ? Number(selectedDay) : undefined,
+  })
 
   // Filter summaries
   const filteredSummaries = allSummaries.filter((summary) => {
@@ -75,6 +83,75 @@ export default function ArchivePage() {
                 className="pl-10"
               />
             </div>
+
+            {/* Date Filters */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Calendar className="h-4 w-4" />
+                Filter by Upload Date
+              </div>
+              <div className="flex gap-2">
+                {/* Year Selector */}
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Years</SelectItem>
+                    {[2025, 2024, 2023].map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Month Selector */}
+                <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!selectedYear}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Months</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                      <SelectItem key={month} value={month.toString()}>
+                        {new Date(2000, month - 1).toLocaleDateString('ko-KR', { month: 'long' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Day Selector */}
+                <Select value={selectedDay} onValueChange={setSelectedDay} disabled={!selectedMonth}>
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue placeholder="Day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Days</SelectItem>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                      <SelectItem key={day} value={day.toString()}>
+                        {day}일
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(selectedYear || selectedMonth || selectedDay) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedYear('')
+                    setSelectedMonth('')
+                    setSelectedDay('')
+                  }}
+                >
+                  Clear date filter
+                </Button>
+              )}
+            </div>
+
+            <Separator />
 
             {/* Tag Filters */}
             <div className="space-y-2">

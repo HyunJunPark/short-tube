@@ -225,6 +225,9 @@ export class DataService {
   async getAllSummaries(options?: {
     search?: string;
     channelName?: string;
+    year?: number;
+    month?: number;
+    day?: number;
     limit?: number;
     offset?: number;
   }): Promise<Summary[]> {
@@ -269,6 +272,38 @@ export class DataService {
 
     if (options?.channelName) {
       results = results.filter(s => s.channel_name === options.channelName);
+    }
+
+    // Apply date filter based on video published_at
+    if (options?.year || options?.month || options?.day) {
+      const videoCache = await this.loadVideoCache();
+
+      // Create a flat video lookup map for O(1) access
+      const videoLookup = new Map<string, Video>();
+      for (const videos of Object.values(videoCache)) {
+        for (const video of videos) {
+          videoLookup.set(video.id, video);
+        }
+      }
+
+      results = results.filter(s => {
+        const video = videoLookup.get(s.video_id);
+        if (!video || !video.published_at) return false;
+
+        const publishedDate = new Date(video.published_at);
+
+        if (options.year && publishedDate.getFullYear() !== options.year) {
+          return false;
+        }
+        if (options.month && publishedDate.getMonth() + 1 !== options.month) {
+          return false;
+        }
+        if (options.day && publishedDate.getDate() !== options.day) {
+          return false;
+        }
+
+        return true;
+      });
     }
 
     // Sort by date descending

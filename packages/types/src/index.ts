@@ -112,6 +112,9 @@ export interface GetSummariesQuery {
   search?: string;
   channelName?: string;
   date?: string;
+  year?: number;
+  month?: number;
+  day?: number;
   limit?: number;
   offset?: number;
 }
