@@ -136,7 +136,16 @@ export class GeminiService {
 
     const prompt = this.buildBriefingPrompt(summariesText, keywords);
 
-    return await this.client.generateWithFallback(prompt);
+    const briefingContent = await this.client.generateWithFallback(prompt);
+
+    // Add source videos information at the end
+    const sourceVideos = summaries
+      .map((s, i) => `${i + 1}. ${s.channel_name} - ${s.title}`)
+      .join('\n');
+
+    const briefingWithSources = `${briefingContent}\n\n---\n📺 참고한 영상:\n${sourceVideos}`;
+
+    return briefingWithSources;
   }
 
   // ========================================
