@@ -24,7 +24,16 @@ apiClient.interceptors.request.use(
 // Response interceptor
 apiClient.interceptors.response.use(
   (response) => {
-    return response.data
+    // Unwrap API response envelope if it has the expected structure
+    // Expected format: { success: boolean, data: T }
+    if (response.data && typeof response.data === 'object' && 'data' in response.data && 'success' in response.data) {
+      // Return response object with unwrapped data, not raw data
+      return {
+        ...response,
+        data: response.data.data,
+      }
+    }
+    return response
   },
   (error) => {
     // Handle errors globally
