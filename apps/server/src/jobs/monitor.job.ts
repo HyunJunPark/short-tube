@@ -1,5 +1,5 @@
 import { Subscription, Video } from '@short-tube/types';
-import { dataService } from '../services/data.service';
+import { dataService } from '../repositories';
 import { youtubeService } from '../services/youtube.service';
 import { geminiService } from '../services/gemini.service';
 import { notifierService } from '../services/notifier.service';
@@ -24,15 +24,12 @@ export class MonitorJob {
     try {
       console.log(`\n🔄 Starting monitor job (briefing: ${sendBriefing})...`);
 
-      const data = await dataService.loadData();
+      // Get all active subscriptions
+      const subscriptions = await dataService.getSubscriptions();
+      const activeSubscriptions = subscriptions.filter(s => s.is_active !== false);
 
       // Process each active subscription
-      for (const subscription of data.subscriptions) {
-        if (!subscription.is_active) {
-          console.log(`⏭️  Skipping inactive subscription: ${subscription.channel_name}`);
-          continue;
-        }
-
+      for (const subscription of activeSubscriptions) {
         console.log(`\n📺 Processing ${subscription.channel_name}...`);
 
         try {
@@ -45,9 +42,6 @@ export class MonitorJob {
         // Rate limiting: wait between subscriptions
         await this.sleep(RATE_LIMIT_DELAY);
       }
-
-      // Save updated data (with new last_processed_video values)
-      await dataService.saveData(data);
 
       // Generate and send briefing if requested
       if (sendBriefing) {
@@ -93,8 +87,10 @@ export class MonitorJob {
       try {
         await this.processVideo(video, subscription);
 
-        // Update last_processed_video
-        subscription.last_processed_video = video.id;
+        // Update subscription with new last_processed_video
+        await dataService.updateSubscription(subscription.channel_id, {
+          last_processed_video: video.id,
+        });
 
         // Rate limiting: wait between videos
         await this.sleep(RATE_LIMIT_DELAY);

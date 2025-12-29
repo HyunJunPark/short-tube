@@ -117,7 +117,19 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
               Watch
             </a>
           </Button>
-          {existingSummary ? (
+          {/* Show "Generating..." while creating summary */}
+          {isPending && generatingVideoId === video.id ? (
+            <Button
+              size="sm"
+              variant="default"
+              className="flex-1"
+              disabled
+            >
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              Generating...
+            </Button>
+          ) : existingSummary ? (
+            /* Show "View Summary" if summary exists */
             <Button
               size="sm"
               variant="default"
@@ -128,24 +140,15 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
               View Summary
             </Button>
           ) : (
+            /* Show "Summarize" if no summary */
             <Button
               size="sm"
               variant="default"
               className="flex-1"
               onClick={() => handleGenerateSummary(video.id, video.title)}
-              disabled={isPending && generatingVideoId === video.id}
             >
-              {isPending && generatingVideoId === video.id ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <FileText className="mr-2 h-3 w-3" />
-                  Summarize
-                </>
-              )}
+              <FileText className="mr-2 h-3 w-3" />
+              Summarize
             </Button>
           )}
         </div>

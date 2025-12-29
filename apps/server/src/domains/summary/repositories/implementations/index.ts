@@ -1,0 +1,1 @@
+export { FileSummaryRepository } from './file';

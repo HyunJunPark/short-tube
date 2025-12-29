@@ -1,0 +1,1 @@
+export { ISubscriptionRepository } from './interfaces';

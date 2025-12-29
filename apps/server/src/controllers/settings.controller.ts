@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { dataService } from '../services/data.service';
+import { dataService } from '../repositories';
 import { notifierService } from '../services/notifier.service';
 
 export class SettingsController {

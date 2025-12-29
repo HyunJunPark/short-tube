@@ -1,0 +1,1 @@
+export { ISettingsRepository } from './interfaces';

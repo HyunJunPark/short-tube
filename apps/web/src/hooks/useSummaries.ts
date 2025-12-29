@@ -33,6 +33,7 @@ export function useSummary(videoId: string) {
       return response.data
     },
     enabled: !!videoId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   })
 }
 
@@ -48,7 +49,11 @@ export function useGenerateSummary() {
       })
       return response.data
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Immediately update the cache with the new summary
+      queryClient.setQueryData(['summary', data.video_id], data)
+      
+      // Invalidate all summaries queries for fresh data
       queryClient.invalidateQueries({ queryKey: ['summaries'] })
     },
   })

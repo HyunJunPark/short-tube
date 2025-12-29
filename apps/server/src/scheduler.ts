@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { dataService } from './services/data.service';
+import { dataService } from './repositories';
 import { monitorJob } from './jobs/monitor.job';
 
 export class Scheduler {
