@@ -73,7 +73,7 @@ export default function BriefingPage() {
               {briefing?.title || `Briefing for ${selectedDate}`}
             </CardTitle>
             <CardDescription>
-              AI-generated summary of the day's videos
+              AI-generated summary of the day&apos;s videos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -84,7 +84,7 @@ export default function BriefingPage() {
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground space-y-4">
                 <p>No briefing available for this date</p>
-                <p className="text-sm">Click "Generate Briefing" to create one</p>
+                <p className="text-sm">Click &quot;Generate Briefing&quot; to create one</p>
               </div>
             ) : briefing ? (
               <div className="prose prose-sm max-w-none dark:prose-invert">

@@ -97,7 +97,7 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
                 <DialogHeader>
                   <DialogTitle>Delete Channel</DialogTitle>
                   <DialogDescription>
-                    Are you sure you want to remove "{subscription.channel_name}" from your
+                    Are you sure you want to remove &quot;{subscription.channel_name}&quot; from your
                     subscriptions? This action cannot be undone.
                   </DialogDescription>
                 </DialogHeader>
