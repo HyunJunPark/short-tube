@@ -92,12 +92,12 @@ export default function ArchivePage() {
               </div>
               <div className="flex gap-2">
                 {/* Year Selector */}
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <Select value={selectedYear || 'all'} onValueChange={(value) => setSelectedYear(value === 'all' ? '' : value)}>
                   <SelectTrigger className="w-[120px]">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Years</SelectItem>
+                    <SelectItem value="all">All Years</SelectItem>
                     {[2025, 2024, 2023].map((year) => (
                       <SelectItem key={year} value={year.toString()}>
                         {year}
@@ -107,12 +107,12 @@ export default function ArchivePage() {
                 </Select>
 
                 {/* Month Selector */}
-                <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={!selectedYear}>
+                <Select value={selectedMonth || 'all'} onValueChange={(value) => setSelectedMonth(value === 'all' ? '' : value)} disabled={!selectedYear}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Month" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Months</SelectItem>
+                    <SelectItem value="all">All Months</SelectItem>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                       <SelectItem key={month} value={month.toString()}>
                         {new Date(2000, month - 1).toLocaleDateString('ko-KR', { month: 'long' })}
@@ -122,12 +122,12 @@ export default function ArchivePage() {
                 </Select>
 
                 {/* Day Selector */}
-                <Select value={selectedDay} onValueChange={setSelectedDay} disabled={!selectedMonth}>
+                <Select value={selectedDay || 'all'} onValueChange={(value) => setSelectedDay(value === 'all' ? '' : value)} disabled={!selectedMonth}>
                   <SelectTrigger className="w-[100px]">
                     <SelectValue placeholder="Day" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Days</SelectItem>
+                    <SelectItem value="all">All Days</SelectItem>
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                       <SelectItem key={day} value={day.toString()}>
                         {day}일
