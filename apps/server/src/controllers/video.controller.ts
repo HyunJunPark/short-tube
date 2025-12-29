@@ -29,6 +29,7 @@ export class VideoController {
 
   async refresh(req: Request, res: Response, next: NextFunction) {
     try {
+      console.log('Refreshing videos for channel:', req.params.channelId);
       const { channelId } = req.params;
       const { days = '7' } = req.query;
 

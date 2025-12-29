@@ -7,6 +7,7 @@ export interface UserSettings {
   target_platform: 'Telegram' | 'Slack' | 'Discord';
   telegram_token?: string;
   telegram_chat_id?: string;
+  notification_enabled?: boolean; // Enable/disable daily notifications
 }
 
 // ========================================

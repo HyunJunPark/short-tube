@@ -23,6 +23,7 @@ export class YouTubeService {
     if (this.client.isConfigured()) {
       try {
         return await this.getChannelInfoViaAPI(urlOrHandle);
+        console.log('YouTube API Successed');
       } catch (error) {
         console.warn('YouTube API failed, falling back to yt-dlp:', error);
       }
@@ -157,8 +158,12 @@ export class YouTubeService {
    * Tries YouTube API first, falls back to RSS
    */
   async getRecentVideos(channelId: string, days: number = 7): Promise<Video[]> {
+    console.log('before getRecentVideos videos');
+
     if (this.client.isConfigured()) {
+      console.log('client is configured');
       try {
+        console.log('before getVideosViaAPI');
         return await this.getVideosViaAPI(channelId, days);
       } catch (error: any) {
         // If quota exceeded, fall back to RSS
@@ -177,11 +182,15 @@ export class YouTubeService {
   private async getVideosViaAPI(channelId: string, days: number): Promise<Video[]> {
     const youtube = this.client.getClient();
 
+    console.log('getVideosViaAPI 1');
+
     // Get channel uploads playlist
     const channelResponse = await youtube.channels.list({
       part: ['contentDetails'],
       id: [channelId],
     });
+
+    console.log('getVideosViaAPI 2');
 
     const uploadsPlaylistId =
       channelResponse.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
@@ -190,12 +199,16 @@ export class YouTubeService {
       throw new NotFoundError('Channel uploads not found');
     }
 
+    console.log('getVideosViaAPI 3');
+
     // Get recent videos
     const playlistResponse = await this.client.getPlaylistItems(uploadsPlaylistId, 50);
 
     const videoIds = playlistResponse.data.items
       ?.map(item => item.snippet?.resourceId?.videoId)
       .filter((id): id is string => !!id) || [];
+
+    console.log('getVideosViaAPI 4 ' + videoIds.length);
 
     if (videoIds.length === 0) {
       return [];
@@ -230,6 +243,9 @@ export class YouTubeService {
       });
     }
 
+    console.log('getVideosViaAPI 5');
+    console.log('data: ' + JSON.stringify(videos));
+
     return videos;
   }
 
@@ -244,6 +260,7 @@ export class YouTubeService {
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const videos: Video[] = [];
+    const videoIds: string[] = [];
 
     for (const entry of Array.isArray(entries) ? entries : [entries]) {
       const publishedAt = entry.published;
@@ -253,9 +270,9 @@ export class YouTubeService {
       if (publishDate < cutoffDate) continue;
 
       const videoId = entry['yt:videoId'] || entry.id?.split(':').pop() || '';
+      if (!videoId) continue;
 
-      // For RSS, we don't have duration info, so we'll need to fetch it
-      // For now, add all videos and mark has_caption as false
+      // Placeholder values; will be updated after fetching details if possible
       videos.push({
         id: videoId,
         title: entry.title || 'Untitled',
@@ -263,6 +280,32 @@ export class YouTubeService {
         has_caption: false,
         duration: '00:00', // Unknown from RSS
       });
+      videoIds.push(videoId);
+    }
+
+    // If API client is configured, fetch detailed info for caption and duration
+    if (this.client.isConfigured() && videoIds.length > 0) {
+      try {
+        const detailsResponse = await this.client.getVideoDetails(videoIds);
+        const items = detailsResponse.data.items || [];
+        // Create a map for quick lookup
+        const detailMap: Record<string, any> = {};
+        for (const item of items) {
+          if (item.id) detailMap[item.id] = item;
+        }
+        // Update videos array with real caption flag and duration
+        for (const video of videos) {
+          const detail = detailMap[video.id];
+          if (detail) {
+            video.has_caption = detail.contentDetails?.caption === 'true';
+            const isoDur = detail.contentDetails?.duration || '';
+            video.duration = this.parseDuration(isoDur);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch video details for RSS videos:', err);
+        // Keep placeholder values if fetching fails
+      }
     }
 
     return videos;

@@ -8,16 +8,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { useSettings, useUpdateSettings, useTestTelegram } from '@/hooks/useSettings'
 
 export default function SettingsPage() {
   const { data: settings, isLoading } = useSettings()
-  const { mutate: updateSettings, isPending: isSaving } = useUpdateSettings()
+  const { mutate: updateSettings, isPending: isSaving, isSuccess: isSaveSuccess } = useUpdateSettings()
   const { mutate: testTelegram, isPending: isTesting, isSuccess: testSuccess } = useTestTelegram()
 
   const [notificationTime, setNotificationTime] = useState('')
   const [telegramToken, setTelegramToken] = useState('')
   const [telegramChatId, setTelegramChatId] = useState('')
+  const [notificationEnabled, setNotificationEnabled] = useState(true)
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false)
 
   // Load settings into form
   useEffect(() => {
@@ -25,14 +28,25 @@ export default function SettingsPage() {
       setNotificationTime(settings.notification_time || '')
       setTelegramToken(settings.telegram_token || '')
       setTelegramChatId(settings.telegram_chat_id || '')
+      setNotificationEnabled(settings.notification_enabled ?? true)
     }
   }, [settings])
+
+  // Show save success message
+  useEffect(() => {
+    if (isSaveSuccess) {
+      setShowSaveSuccess(true)
+      const timer = setTimeout(() => setShowSaveSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [isSaveSuccess])
 
   const handleSave = () => {
     updateSettings({
       notification_time: notificationTime,
       telegram_token: telegramToken,
       telegram_chat_id: telegramChatId,
+      notification_enabled: notificationEnabled,
     })
   }
 
@@ -62,18 +76,34 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="notification-time">Daily Notification Time</Label>
-              <Input
-                id="notification-time"
-                type="time"
-                value={notificationTime}
-                onChange={(e) => setNotificationTime(e.target.value)}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="notification-enabled">Enable Daily Notifications</Label>
+                <p className="text-xs text-muted-foreground">
+                  Turn daily notifications on or off
+                </p>
+              </div>
+              <Switch
+                id="notification-enabled"
+                checked={notificationEnabled}
+                onCheckedChange={setNotificationEnabled}
               />
-              <p className="text-xs text-muted-foreground">
-                The system will check for new videos and send briefing at this time
-              </p>
             </div>
+
+            {notificationEnabled && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="notification-time">Daily Notification Time</Label>
+                <Input
+                  id="notification-time"
+                  type="time"
+                  value={notificationTime}
+                  onChange={(e) => setNotificationTime(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The system will check for new videos and send briefing at this time
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -95,6 +125,11 @@ export default function SettingsPage() {
                 value={telegramToken}
                 onChange={(e) => setTelegramToken(e.target.value)}
               />
+              {telegramToken && (
+                <p className="text-xs text-muted-foreground">
+                  {telegramToken.substring(0, 2)}••••••••{telegramToken.substring(telegramToken.length - 2)}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Get your bot token from @BotFather on Telegram
               </p>
@@ -104,10 +139,16 @@ export default function SettingsPage() {
               <Label htmlFor="telegram-chat-id">Chat ID</Label>
               <Input
                 id="telegram-chat-id"
+                type="password"
                 placeholder="-1001234567890"
                 value={telegramChatId}
                 onChange={(e) => setTelegramChatId(e.target.value)}
               />
+              {telegramChatId && (
+                <p className="text-xs text-muted-foreground">
+                  {telegramChatId.substring(0, 2)}••••••••{telegramChatId.substring(telegramChatId.length - 2)}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Your Telegram chat ID or group ID
               </p>
@@ -148,7 +189,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Save Button */}
-        <div className="flex justify-end">
+        <div className="flex flex-col items-end gap-2">
           <Button
             onClick={handleSave}
             disabled={isSaving}
@@ -166,6 +207,12 @@ export default function SettingsPage() {
               </>
             )}
           </Button>
+          {showSaveSuccess && (
+            <p className="text-sm text-green-600 flex items-center">
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Settings saved successfully
+            </p>
+          )}
         </div>
       </div>
     </MainLayout>

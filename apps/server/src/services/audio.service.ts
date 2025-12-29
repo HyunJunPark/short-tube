@@ -19,6 +19,10 @@ export class AudioService {
     const outputPath = path.join(this.tempDir, `${videoId}.mp3`);
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
+    console.log(`[AudioService] 🎬 Starting audio download for video: ${videoId}`);
+    console.log(`[AudioService] 📍 Output path: ${outputPath}`);
+    console.log(`[AudioService] 🔗 Video URL: ${videoUrl}`);
+
     return new Promise((resolve, reject) => {
       const ytdlp = spawn('yt-dlp', [
         '-f', 'bestaudio/best',
@@ -29,15 +33,49 @@ export class AudioService {
       ]);
 
       let stderr = '';
+      let lastLoggedPercentage = 0;
 
       ytdlp.stderr.on('data', (data) => {
-        stderr += data.toString();
+        const message = data.toString();
+        stderr += message;
       });
 
-      ytdlp.on('close', (code) => {
+      ytdlp.stdout?.on('data', (data) => {
+        const message = data.toString();
+
+        // Log progress information only at 10% intervals
+        if (message.includes('%')) {
+          // Extract percentage from progress string like "[download]  58.4% of   23.95MiB"
+          const percentMatch = message.match(/(\d+(?:\.\d+)?)\%/);
+          if (percentMatch) {
+            const currentPercentage = Math.floor(parseFloat(percentMatch[1]) / 10) * 10;
+
+            // Only log when we cross a 10% threshold
+            if (currentPercentage > lastLoggedPercentage && currentPercentage % 10 === 0) {
+              lastLoggedPercentage = currentPercentage;
+              console.log(`[AudioService] ⏳ Download progress: ${currentPercentage}%`);
+            }
+          }
+        }
+      });
+
+      ytdlp.on('close', async (code) => {
         if (code === 0) {
-          resolve(outputPath);
+          try {
+            // Check file size after download
+            const stats = await fs.stat(outputPath);
+            const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
+            console.log(`[AudioService] ✅ Audio download completed successfully`);
+            console.log(`[AudioService] 📦 File size: ${fileSizeInMB} MB`);
+            console.log(`[AudioService] 📄 File path: ${outputPath}`);
+            resolve(outputPath);
+          } catch (error) {
+            console.error(`[AudioService] ❌ Failed to check file stats:`, error);
+            reject(new InternalServerError(`Failed to verify downloaded audio file`));
+          }
         } else {
+          console.error(`[AudioService] ❌ yt-dlp failed with code ${code}`);
+          console.error(`[AudioService] 📋 Error details:`, stderr);
           reject(new InternalServerError(
             `yt-dlp failed with code ${code}: ${stderr}`
           ));
@@ -45,6 +83,7 @@ export class AudioService {
       });
 
       ytdlp.on('error', (error) => {
+        console.error(`[AudioService] ❌ Failed to spawn yt-dlp:`, error.message);
         reject(new InternalServerError(
           `Failed to spawn yt-dlp: ${error.message}. Make sure yt-dlp is installed.`
         ));
@@ -57,10 +96,13 @@ export class AudioService {
    */
   async cleanup(filePath: string): Promise<void> {
     try {
+      const stats = await fs.stat(filePath);
+      const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
       await fs.unlink(filePath);
+      console.log(`[AudioService] 🗑️ Cleaned up audio file: ${path.basename(filePath)} (${fileSizeInMB} MB)`);
     } catch (error) {
       // Ignore errors if file doesn't exist
-      console.warn(`Failed to delete audio file: ${filePath}`);
+      console.warn(`[AudioService] ⚠️ Failed to delete audio file: ${filePath}`);
     }
   }
 

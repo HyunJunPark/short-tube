@@ -8,5 +8,6 @@ const router = Router();
 router.get('/', validate(getSummariesSchema), summaryController.getAll);
 router.post('/', validate(generateSummarySchema), summaryController.generate);
 router.get('/date/:date', summaryController.getByDate);
+router.get('/:videoId', summaryController.getByVideoId);
 
 export default router;

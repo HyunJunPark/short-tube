@@ -45,6 +45,7 @@ export class DataService {
         target_platform: DEFAULT_PLATFORM,
         telegram_token: '',
         telegram_chat_id: '',
+        notification_enabled: true,
       },
       subscriptions: [],
     };
@@ -278,6 +279,43 @@ export class DataService {
     const limit = options?.limit || results.length;
 
     return results.slice(offset, offset + limit);
+  }
+
+  async getSummaryByVideoId(videoId: string): Promise<Summary | null> {
+    const summaries = await this.loadSummaries();
+
+    // Search for any summary with this videoId
+    for (const [key, value] of Object.entries(summaries)) {
+      // Skip BRIEFING_ entries
+      if (key.startsWith('BRIEFING_')) {
+        continue;
+      }
+
+      // Handle both string and object formats
+      let summary: Summary;
+      if (typeof value === 'string') {
+        // Legacy format - create minimal Summary object
+        const parts = key.split('_');
+        if (parts[0] === videoId) {
+          summary = {
+            content: value,
+            title: '',
+            channel_name: '',
+            video_id: videoId,
+            tags: parts.slice(1) || [],
+            date: '',
+          };
+          return summary;
+        }
+      } else {
+        summary = value;
+        if (summary.video_id === videoId) {
+          return summary;
+        }
+      }
+    }
+
+    return null;
   }
 
   async getBriefing(date: string): Promise<Summary | null> {

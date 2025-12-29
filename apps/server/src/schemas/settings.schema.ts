@@ -6,5 +6,6 @@ export const updateSettingsSchema = z.object({
     target_platform: z.enum(['Telegram', 'Slack', 'Discord']).optional(),
     telegram_token: z.string().optional(),
     telegram_chat_id: z.string().optional(),
+    notification_enabled: z.boolean().optional(),
   }),
 });

@@ -6,7 +6,16 @@ export class SettingsController {
   async get(req: Request, res: Response, next: NextFunction) {
     try {
       const settings = await dataService.getSettings();
-      res.json({ success: true, data: settings });
+      
+      // Merge with environment variables if not set in database
+      const mergedSettings = {
+        ...settings,
+        // Use environment variables as fallback if database values are empty
+        telegram_token: settings.telegram_token || process.env.TELEGRAM_BOT_TOKEN || '',
+        telegram_chat_id: settings.telegram_chat_id || process.env.TELEGRAM_CHAT_ID || '',
+      };
+      
+      res.json({ success: true, data: mergedSettings });
     } catch (error) {
       next(error);
     }

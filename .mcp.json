@@ -1,11 +1,11 @@
 {
   "mcpServers": {
     "serena": {
-      "command": "/abs/path/to/uv",
+      "command": "/Users/jun/.local/bin/uv",
       "args": [
         "run",
         "--directory",
-        "/abs/path/to/serena",
+        "/Users/jun/.cache/uv/git-v0/checkouts/42910dfe8296368e/5b730ba",
         "serena",
         "start-mcp-server"
       ]

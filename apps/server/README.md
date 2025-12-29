@@ -22,7 +22,7 @@ Copy `.env.example` to `.env` and configure:
 ```env
 # Server
 NODE_ENV=development
-PORT=3001
+PORT=3002
 CORS_ORIGIN=http://localhost:3000
 
 # Google APIs

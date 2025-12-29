@@ -25,16 +25,41 @@ export class GeminiService {
   }
 
   /**
-   * Summarize audio file
-   * Note: File upload API may vary based on SDK version
+   * Summarize audio file using Gemini API
    */
   async summarizeAudio(filePath: string, keywords: string[]): Promise<string> {
-    // For now, return a placeholder message
-    // Audio file upload requires specific SDK setup that may vary
-    // This would need to be implemented based on the actual Google AI SDK version
-    throw new InternalServerError(
-      'Audio summarization not yet implemented. Please ensure video has captions.'
-    );
+    console.log(`[GeminiService] 🎵 Starting audio summarization for: ${filePath}`);
+    console.log(`[GeminiService] 🔑 Keywords: ${keywords.join(', ') || '없음'}`);
+
+    const prompt = this.buildAudioPrompt(keywords);
+
+    try {
+      const startTime = Date.now();
+      console.log(`[GeminiService] 📤 Sending audio to Gemini API...`);
+
+      const summary = await this.client.generateWithAudio(
+        filePath,
+        prompt,
+        'audio/mpeg'
+      );
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`[GeminiService] ✅ Audio summarization completed in ${duration}s`);
+
+      // Check for error keywords indicating audio processing failure
+      if (this.isErrorSummary(summary)) {
+        console.warn(`[GeminiService] ⚠️ Error keywords detected in summary`);
+        throw new Error('Invalid audio summary');
+      }
+
+      console.log(`[GeminiService] 📝 Summary length: ${summary.length} characters`);
+      return summary;
+    } catch (error) {
+      console.error(`[GeminiService] ❌ Audio summarization failed for ${filePath}:`, error);
+      throw new InternalServerError(
+        'Failed to summarize audio. Please try again or ensure the video has valid audio content.'
+      );
+    }
   }
 
   /**
@@ -44,30 +69,48 @@ export class GeminiService {
     videoId: string,
     tags: string[]
   ): Promise<string> {
+    console.log(`[GeminiService] 🔄 Starting summary with fallback for video: ${videoId}`);
+    console.log(`[GeminiService] 🏷️ Tags: ${tags.join(', ') || '없음'}`);
+
     try {
       // Try transcript first
+      console.log(`[GeminiService] 📄 Attempting to fetch transcript...`);
+      const startTime = Date.now();
+
       const transcript = await transcriptService.getTranscript(videoId);
+      const transcriptLength = transcript.length;
+      console.log(`[GeminiService] ✅ Transcript fetched: ${transcriptLength} characters`);
+
       const summary = await this.summarize(transcript, tags);
 
       // Check for error keywords indicating transcript failure
       if (this.isErrorSummary(summary)) {
+        console.warn(`[GeminiService] ⚠️ Error keywords detected in transcript summary`);
         throw new Error('Invalid transcript summary');
       }
 
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`[GeminiService] ✅ Transcript-based summary completed in ${duration}s`);
       return summary;
     } catch (error) {
       // Transcript failed, try audio
-      console.log(`Transcript failed for ${videoId}, trying audio analysis...`);
+      console.warn(`[GeminiService] ⚠️ Transcript method failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.log(`[GeminiService] 🔄 Falling back to audio analysis...`);
 
       let audioPath: string | null = null;
 
       try {
         audioPath = await audioService.downloadAudio(videoId);
         const summary = await this.summarizeAudio(audioPath, tags);
+        console.log(`[GeminiService] ✅ Audio-based summary completed successfully`);
         return summary;
+      } catch (audioError) {
+        console.error(`[GeminiService] ❌ Audio fallback also failed:`, audioError instanceof Error ? audioError.message : 'Unknown error');
+        throw audioError;
       } finally {
         // Always cleanup audio file
         if (audioPath) {
+          console.log(`[GeminiService] 🧹 Cleaning up audio resources...`);
           await audioService.cleanup(audioPath);
         }
       }

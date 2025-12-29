@@ -36,6 +36,12 @@ export class Scheduler {
   private async checkAndRun(): Promise<void> {
     try {
       const settings = await dataService.getSettings();
+      
+      // Check if notifications are enabled
+      if (!settings.notification_enabled) {
+        return;
+      }
+
       const now = new Date();
 
       // Format current time as HH:MM
