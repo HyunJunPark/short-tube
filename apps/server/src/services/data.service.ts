@@ -391,7 +391,7 @@ export class DataService {
     return cache[channelId] || [];
   }
 
-  async saveVideoCache(channelId: string, videos: Video[], replace: boolean = false): Promise<void> {
+  async saveVideoCache(channelId: string, videos: Video[]): Promise<void> {
     const cache = await this.loadVideoCache();
     const now = new Date().toISOString();
 
@@ -399,23 +399,17 @@ export class DataService {
     const videosWithTimestamp = videos.map(video => ({\n      ...video,\n      cached_at: now,
     }));
 
-    if (replace) {
-      // Replace mode: completely overwrite the cache for this channel
-      cache[channelId] = videosWithTimestamp;
-    } else {
-      // Merge mode: merge with existing cache (default behavior)
-      const existingVideos = cache[channelId] || [];
-      const existingIdSet = new Set(existingVideos.map(v => v.id));
+    // Merge with existing cache: keep old videos, add/update new ones
+    const existingVideos = cache[channelId] || [];
+    const existingIdSet = new Set(existingVideos.map(v => v.id));
 
-      // Combine: new videos first, then existing videos that aren't in the new list
-      const mergedVideos = [
-        ...videosWithTimestamp,
-        ...existingVideos.filter(v => !existingIdSet.has(v.id)),
-      ];
+    // Combine: new videos first, then existing videos that aren't in the new list
+    const mergedVideos = [
+      ...videosWithTimestamp,
+      ...existingVideos.filter(v => !existingIdSet.has(v.id)),
+    ];
 
-      cache[channelId] = mergedVideos;
-    }
-
+    cache[channelId] = mergedVideos;
     await this.storage.writeJSON(this.VIDEO_CACHE_FILE, cache);
   }
 

@@ -32,11 +32,11 @@ export class VideoController {
     try {
       console.log('Refreshing videos for channel:', req.params.channelId);
       const { channelId } = req.params;
-      // Always fetch 30 days of videos on refresh
+      // Fetch 30 days of videos on refresh (instead of 7 days)
       const videos = await youtubeService.getRecentVideos(channelId, 30);
 
-      // Replace cache completely (don't merge with old cache)
-      await dataService.saveVideoCache(channelId, videos, true);
+      // Merge with existing cache
+      await dataService.saveVideoCache(channelId, videos);
 
       res.json({ success: true, data: videos });
     } catch (error) {
