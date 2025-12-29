@@ -6,7 +6,8 @@ export class VideoController {
   async getByChannel(req: Request, res: Response, next: NextFunction) {
     try {
       const { channelId } = req.params;
-      const { days = '7' } = req.query;
+      // Default to 30 days for better cache accumulation, can be overridden by query param
+      const { days = '30' } = req.query;
 
       // Check cache first
       const cached = await dataService.getVideoCache(channelId);
@@ -31,7 +32,8 @@ export class VideoController {
     try {
       console.log('Refreshing videos for channel:', req.params.channelId);
       const { channelId } = req.params;
-      const { days = '7' } = req.query;
+      // Default to 30 days for better cache accumulation, can be overridden by query param
+      const { days = '30' } = req.query;
 
       const videos = await youtubeService.getRecentVideos(channelId, Number(days));
 

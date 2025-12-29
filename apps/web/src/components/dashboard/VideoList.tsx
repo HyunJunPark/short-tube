@@ -155,6 +155,8 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
 }
 
 export function VideoList({ videos, channelTags }: VideoListProps) {
+  const [displayCount, setDisplayCount] = useState(2)
+
   if (videos.length === 0) {
     return (
       <div className="text-sm text-muted-foreground text-center py-8">
@@ -163,14 +165,36 @@ export function VideoList({ videos, channelTags }: VideoListProps) {
     )
   }
 
+  const visibleVideos = videos.slice(0, displayCount)
+  const hasMore = displayCount < videos.length
+
+  const handleLoadMore = () => {
+    setDisplayCount(prev => Math.min(prev + 2, videos.length))
+  }
+
   return (
     <div className="space-y-3">
-      {videos.map((video, index) => (
+      {visibleVideos.map((video, index) => (
         <div key={video.id}>
           {index > 0 && <Separator className="my-3" />}
           <VideoItem video={video} channelTags={channelTags} />
         </div>
       ))}
+      
+      {hasMore && (
+        <>
+          <Separator className="my-4" />
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLoadMore}
+            >
+              Load More ({videos.length - displayCount} more)
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

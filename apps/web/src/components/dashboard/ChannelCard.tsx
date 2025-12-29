@@ -35,8 +35,17 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const { mutate: updateSubscription } = useUpdateSubscription()
   const { mutate: deleteSubscription, isPending: isDeleting } = useDeleteSubscription()
-  const { data: videos = [], isLoading: isLoadingVideos } = useVideos(subscription.channel_id)
+  const { data: allVideos = [], isLoading: isLoadingVideos } = useVideos(subscription.channel_id)
   const { mutate: refreshVideos, isPending: isRefreshing } = useRefreshVideos()
+
+  // Filter videos to show only those from the last 7 days
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  
+  const videos = allVideos.filter(video => {
+    const publishDate = new Date(video.published_at)
+    return publishDate >= sevenDaysAgo
+  })
 
   const handleToggleActive = (checked: boolean) => {
     updateSubscription({

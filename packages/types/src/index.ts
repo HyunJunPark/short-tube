@@ -32,6 +32,7 @@ export interface Video {
   published_at: string; // ISO 8601 format
   has_caption: boolean;
   duration: string; // "HH:MM:SS" format
+  cached_at?: string; // ISO 8601 format - when this video was cached
 }
 
 // ========================================

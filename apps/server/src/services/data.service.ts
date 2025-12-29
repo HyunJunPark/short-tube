@@ -393,7 +393,25 @@ export class DataService {
 
   async saveVideoCache(channelId: string, videos: Video[]): Promise<void> {
     const cache = await this.loadVideoCache();
-    cache[channelId] = videos;
+    const now = new Date().toISOString();
+
+    // Add cached_at timestamp to all videos
+    const videosWithTimestamp = videos.map(video => ({
+      ...video,
+      cached_at: now,
+    }));
+
+    // Merge with existing cache: keep old videos, add/update new ones
+    const existingVideos = cache[channelId] || [];
+    const existingIdSet = new Set(existingVideos.map(v => v.id));
+
+    // Combine: new videos first, then existing videos that aren't in the new list
+    const mergedVideos = [
+      ...videosWithTimestamp,
+      ...existingVideos.filter(v => !existingIdSet.has(v.id)),
+    ];
+
+    cache[channelId] = mergedVideos;
     await this.storage.writeJSON(this.VIDEO_CACHE_FILE, cache);
   }
 
