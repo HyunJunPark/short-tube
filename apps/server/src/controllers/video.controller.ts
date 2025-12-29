@@ -32,12 +32,11 @@ export class VideoController {
     try {
       console.log('Refreshing videos for channel:', req.params.channelId);
       const { channelId } = req.params;
-      // Default to 30 days for better cache accumulation, can be overridden by query param
-      const { days = '30' } = req.query;
+      // Always fetch 30 days of videos on refresh
+      const videos = await youtubeService.getRecentVideos(channelId, 30);
 
-      const videos = await youtubeService.getRecentVideos(channelId, Number(days));
-
-      await dataService.saveVideoCache(channelId, videos);
+      // Replace cache completely (don't merge with old cache)
+      await dataService.saveVideoCache(channelId, videos, true);
 
       res.json({ success: true, data: videos });
     } catch (error) {
