@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils'
 interface MainLayoutProps {
   children: React.ReactNode
   title: string
+  notificationCount?: number
 }
 
-export function MainLayout({ children, title }: MainLayoutProps) {
+export function MainLayout({ children, title, notificationCount = 0 }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -35,7 +36,7 @@ export function MainLayout({ children, title }: MainLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={title} onMenuClick={() => setSidebarOpen(true)} />
+        <Header title={title} onMenuClick={() => setSidebarOpen(true)} notificationCount={notificationCount} />
         <main className="flex-1 overflow-y-auto bg-muted/30 p-6">
           {children}
         </main>

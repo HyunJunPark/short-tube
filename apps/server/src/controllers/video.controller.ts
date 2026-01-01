@@ -1,28 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { dataService } from '../repositories';
+import { dataService, notificationLogRepository, videoCacheRepository } from '../repositories';
 import { youtubeService } from '../services/youtube.service';
 
 export class VideoController {
   async getByChannel(req: Request, res: Response, next: NextFunction) {
     try {
       const { channelId } = req.params;
-      // Default to 30 days for better cache accumulation, can be overridden by query param
-      const { days = '30' } = req.query;
 
-      // Check cache first
+      // Return cache only - no API fallback
       const cached = await dataService.getVideoCache(channelId);
-
-      if (cached.length > 0) {
-        return res.json({ success: true, data: cached, cached: true });
-      }
-
-      // Fetch from YouTube
-      const videos = await youtubeService.getRecentVideos(channelId, Number(days));
-
-      // Cache the results
-      await dataService.saveVideoCache(channelId, videos);
-
-      res.json({ success: true, data: videos, cached: false });
+      res.json({ success: true, data: cached, cached: true });
     } catch (error) {
       next(error);
     }
@@ -32,11 +19,11 @@ export class VideoController {
     try {
       console.log('Refreshing videos for channel:', req.params.channelId);
       const { channelId } = req.params;
-      // Fetch 30 days of videos on refresh (instead of 7 days)
+      // Fetch 30 days of videos on refresh via API for complete data
       const videos = await youtubeService.getRecentVideos(channelId, 30);
 
-      // Merge with existing cache
-      await dataService.saveVideoCache(channelId, videos);
+      // Replace entire cache with API data
+      await videoCacheRepository.replaceForChannel(channelId, videos);
 
       res.json({ success: true, data: videos });
     } catch (error) {
@@ -44,7 +31,7 @@ export class VideoController {
     }
   }
 
-  async getStats(req: Request, res: Response, next: NextFunction) {
+  async getStats(_req: Request, res: Response, next: NextFunction) {
     try {
       const subscriptions = await dataService.getSubscriptions();
       let totalVideos = 0;
@@ -55,6 +42,113 @@ export class VideoController {
       }
 
       res.json({ success: true, data: { total_videos: totalVideos } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async checkNewVideos(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const subscriptions = await dataService.getSubscriptions();
+      const newVideosByChannel: Record<string, number> = {};
+
+      for (const subscription of subscriptions) {
+        if (!subscription.is_active) {
+          newVideosByChannel[subscription.channel_id] = 0;
+          continue;
+        }
+
+        try {
+          // Initialize notification log for this channel if needed
+          await notificationLogRepository.initializeIfNotExists(subscription.channel_id);
+
+          // Get last checked time
+          const notificationLog = await notificationLogRepository.getForChannel(subscription.channel_id);
+          const checkedVideoIds = new Set(notificationLog?.checked_video_ids || []);
+
+          // Fetch recent videos from RSS (7 days only)
+          const recentVideos = await youtubeService.getVideosViaRSS(
+            subscription.channel_id,
+            7
+          );
+
+          // Get cached videos
+          const cachedVideos = await dataService.getVideoCache(
+            subscription.channel_id
+          );
+          const cachedVideoIds = new Set(cachedVideos.map(v => v.id));
+
+          // Find new videos (not in cache)
+          const newVideos = recentVideos.filter(v => !cachedVideoIds.has(v.id));
+
+          // Count videos that are new and haven't been notified yet
+          const notNotifiedVideos = newVideos.filter(v => !checkedVideoIds.has(v.id));
+
+          // If there are new videos, add them to cache (they already have source: 'rss')
+          if (newVideos.length > 0) {
+            // Merge with existing cache (new videos first)
+            const updatedCache = [...newVideos, ...cachedVideos];
+            await dataService.saveVideoCache(subscription.channel_id, updatedCache);
+
+            // Add new video IDs to notification log
+            await notificationLogRepository.addCheckedVideos(
+              subscription.channel_id,
+              newVideos.map(v => v.id)
+            );
+          }
+
+          // Return count of videos that haven't been notified yet
+          newVideosByChannel[subscription.channel_id] = notNotifiedVideos.length;
+        } catch (error) {
+          console.error(
+            `Error checking new videos for channel ${subscription.channel_id}:`,
+            error
+          );
+          newVideosByChannel[subscription.channel_id] = 0;
+        }
+      }
+
+      // Count total new videos
+      const totalNewVideos = Object.values(newVideosByChannel).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+
+      res.json({
+        success: true,
+        data: {
+          totalNewVideos,
+          byChannel: newVideosByChannel,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async markNotificationsChecked(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { channelId } = req.params;
+      const now = new Date().toISOString();
+
+      // If channelId is '*', mark all channels as checked
+      if (channelId === '*') {
+        const subscriptions = await dataService.getSubscriptions();
+        for (const subscription of subscriptions) {
+          await notificationLogRepository.updateLastCheckedAt(
+            subscription.channel_id,
+            now
+          );
+        }
+      } else {
+        // Mark specific channel as checked
+        await notificationLogRepository.updateLastCheckedAt(channelId, now);
+      }
+
+      res.json({
+        success: true,
+        data: { message: 'Notifications marked as checked' },
+      });
     } catch (error) {
       next(error);
     }

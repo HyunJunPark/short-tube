@@ -240,6 +240,7 @@ export class YouTubeService {
         published_at: publishedAt,
         has_caption: (item.contentDetails?.caption === 'true'),
         duration,
+        source: 'api', // Track source as API
       });
     }
 
@@ -249,7 +250,7 @@ export class YouTubeService {
     return videos;
   }
 
-  private async getVideosViaRSS(channelId: string, days: number): Promise<Video[]> {
+  public async getVideosViaRSS(channelId: string, days: number): Promise<Video[]> {
     const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
 
     const response = await axios.get(rssUrl);
@@ -260,7 +261,6 @@ export class YouTubeService {
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const videos: Video[] = [];
-    const videoIds: string[] = [];
 
     for (const entry of Array.isArray(entries) ? entries : [entries]) {
       const publishedAt = entry.published;
@@ -272,40 +272,15 @@ export class YouTubeService {
       const videoId = entry['yt:videoId'] || entry.id?.split(':').pop() || '';
       if (!videoId) continue;
 
-      // Placeholder values; will be updated after fetching details if possible
+      // RSS videos have incomplete metadata - no API enrichment
       videos.push({
         id: videoId,
         title: entry.title || 'Untitled',
         published_at: publishedAt,
         has_caption: false,
-        duration: '00:00', // Unknown from RSS
+        duration: 'N/A', // Unknown from RSS - display as N/A
+        source: 'rss', // Track source as RSS
       });
-      videoIds.push(videoId);
-    }
-
-    // If API client is configured, fetch detailed info for caption and duration
-    if (this.client.isConfigured() && videoIds.length > 0) {
-      try {
-        const detailsResponse = await this.client.getVideoDetails(videoIds);
-        const items = detailsResponse.data.items || [];
-        // Create a map for quick lookup
-        const detailMap: Record<string, any> = {};
-        for (const item of items) {
-          if (item.id) detailMap[item.id] = item;
-        }
-        // Update videos array with real caption flag and duration
-        for (const video of videos) {
-          const detail = detailMap[video.id];
-          if (detail) {
-            video.has_caption = detail.contentDetails?.caption === 'true';
-            const isoDur = detail.contentDetails?.duration || '';
-            video.duration = this.parseDuration(isoDur);
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to fetch video details for RSS videos:', err);
-        // Keep placeholder values if fetching fails
-      }
     }
 
     return videos;

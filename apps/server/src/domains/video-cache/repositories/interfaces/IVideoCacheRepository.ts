@@ -17,6 +17,12 @@ export interface IVideoCacheRepository {
   saveForChannel(channelId: string, videos: Video[]): Promise<void>;
 
   /**
+   * Replace entire cache for a channel
+   * Used by refresh operation to fully synchronize
+   */
+  replaceForChannel(channelId: string, videos: Video[]): Promise<void>;
+
+  /**
    * Delete all cached videos for a channel
    */
   deleteForChannel(channelId: string): Promise<void>;

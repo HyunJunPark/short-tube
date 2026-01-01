@@ -17,6 +17,7 @@ import { FileSubscriptionRepository } from '../domains/subscription/repositories
 import { FileSettingsRepository } from '../domains/settings/repositories/implementations';
 import { FileSummaryRepository } from '../domains/summary/repositories/implementations';
 import { FileVideoCacheRepository } from '../domains/video-cache/repositories/implementations';
+import { NotificationLogFileStorage } from '../domains/notification-log/file-storage';
 import { DataService } from '../services/data.service';
 
 // Initialize FileStorage singleton
@@ -27,6 +28,7 @@ const subscriptionRepository = new FileSubscriptionRepository(fileStorage);
 const settingsRepository = new FileSettingsRepository(fileStorage);
 const summaryRepository = new FileSummaryRepository(fileStorage);
 const videoCacheRepository = new FileVideoCacheRepository(fileStorage);
+const notificationLogRepository = new NotificationLogFileStorage();
 
 // Initialize DataService with repositories
 const dataService = new DataService(
@@ -43,6 +45,7 @@ export {
   settingsRepository,
   summaryRepository,
   videoCacheRepository,
+  notificationLogRepository,
   dataService,
 };
 
@@ -51,3 +54,4 @@ export type { ISubscriptionRepository } from '../domains/subscription/repositori
 export type { ISettingsRepository } from '../domains/settings/repositories';
 export type { ISummaryRepository, SummaryEntity, SummaryQueryOptions } from '../domains/summary/repositories';
 export type { IVideoCacheRepository } from '../domains/video-cache/repositories';
+export type { INotificationLogRepository } from '../domains/notification-log/repositories';

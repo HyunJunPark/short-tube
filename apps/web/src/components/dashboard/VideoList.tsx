@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, ExternalLink, FileText, Subtitles } from 'lucide-react'
+import { Loader2, ExternalLink, FileText, Subtitles, Rss } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -91,12 +91,21 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
+            {video.source === 'rss' && (
+              <Badge variant="outline" className="border-orange-500 text-orange-700">
+                <Rss className="mr-1 h-3 w-3" />
+                RSS
+              </Badge>
+            )}
             <Badge variant="secondary">
-              {video.duration}
+              {video.duration === 'N/A' ? 'N/A' : video.duration}
             </Badge>
             <Badge variant={video.has_caption ? 'default' : 'outline'}>
               <Subtitles className="mr-1 h-3 w-3" />
-              {video.has_caption ? '자막' : '자막없음'}
+              {video.source === 'rss'
+                ? 'Unknown'
+                : (video.has_caption ? '자막' : '자막없음')
+              }
             </Badge>
           </div>
         </div>

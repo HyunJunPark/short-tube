@@ -26,13 +26,16 @@ export interface Subscription {
 // Video
 // ========================================
 
+export type VideoSource = 'api' | 'rss';
+
 export interface Video {
   id: string;
   title: string;
   published_at: string; // ISO 8601 format
   has_caption: boolean;
-  duration: string; // "HH:MM:SS" format
+  duration: string; // "HH:MM:SS" format or "N/A" for RSS
   cached_at?: string; // ISO 8601 format - when this video was cached
+  source?: VideoSource; // 'api' or 'rss' - indicates data source
 }
 
 // ========================================
@@ -77,6 +80,17 @@ export interface AppData {
 
 export interface VideoCache {
   [channelId: string]: Video[];
+}
+
+// ========================================
+// Notification Log
+// ========================================
+
+export interface NotificationLog {
+  [channelId: string]: {
+    last_checked_at: string; // ISO 8601 format - when user last checked notifications
+    checked_video_ids: string[]; // Video IDs that have been notified
+  };
 }
 
 // ========================================

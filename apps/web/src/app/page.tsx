@@ -8,18 +8,21 @@ import { ChannelCard } from '@/components/dashboard/ChannelCard'
 import { useSubscriptions } from '@/hooks/useSubscriptions'
 import { useSummaries } from '@/hooks/useSummaries'
 import { useVideoStats } from '@/hooks/useVideos'
+import { useCheckNewVideos } from '@/hooks/useCheckNewVideos'
 
 export default function Home() {
   const { data: subscriptions = [], isLoading: isLoadingSubscriptions } = useSubscriptions()
   const { data: allSummaries = [] } = useSummaries()
   const { data: videoStats } = useVideoStats()
+  const { data: newVideosData } = useCheckNewVideos()
 
   const activeChannels = subscriptions.filter((s) => s.is_active).length
   const totalSummaries = allSummaries.length
   const totalVideos = videoStats?.total_videos || 0
+  const totalNewVideos = newVideosData?.totalNewVideos || 0
 
   return (
-    <MainLayout title="Dashboard">
+    <MainLayout title="Dashboard" notificationCount={totalNewVideos}>
       <div className="space-y-6">
         {/* Stats Overview */}
         <div className="grid gap-4 md:grid-cols-3">
