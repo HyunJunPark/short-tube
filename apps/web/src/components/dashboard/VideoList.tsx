@@ -97,13 +97,16 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
                 RSS
               </Badge>
             )}
-            <Badge variant="secondary">
-              {video.duration === 'N/A' ? 'N/A' : video.duration}
+            <Badge variant="secondary" title={video.source === 'rss' ? '영상 시간을 알 수 없음 (Refresh로 업데이트 필요)' : ''}>
+              {video.duration === 'N/A' ? '영상시간 미확인' : video.duration}
             </Badge>
-            <Badge variant={video.has_caption ? 'default' : 'outline'}>
+            <Badge
+              variant={video.source === 'rss' ? 'outline' : (video.has_caption ? 'default' : 'outline')}
+              title={video.source === 'rss' ? '자막 정보를 알 수 없음 (Refresh로 업데이트 필요)' : ''}
+            >
               <Subtitles className="mr-1 h-3 w-3" />
               {video.source === 'rss'
-                ? 'Unknown'
+                ? '자막확인필요'
                 : (video.has_caption ? '자막' : '자막없음')
               }
             </Badge>
