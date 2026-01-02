@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Summary } from '@short-tube/types';
 import { dataService } from '../repositories';
 import { geminiService } from '../services/gemini.service';
 
@@ -39,7 +40,32 @@ export class SummaryController {
       if (cached) {
         console.log(`[SummaryController] [${requestId}] ✅ Summary found in cache`);
         console.log(`[SummaryController] [${requestId}] 📦 Cached summary length: ${cached.length} characters`);
-        return res.json({ success: true, data: { content: cached, cached: true } });
+
+        // Get video details for cached summary
+        let videoTitle = '';
+        let channelName = '';
+        const subscriptions = await dataService.getSubscriptions();
+        for (const subscription of subscriptions) {
+          const videos = await dataService.getVideoCache(subscription.channel_id);
+          const video = videos.find(v => v.id === videoId);
+          if (video) {
+            videoTitle = video.title;
+            channelName = subscription.channel_name;
+            break;
+          }
+        }
+
+        // Return complete Summary object to match frontend expectations
+        const cachedData: Summary = {
+          content: cached,
+          title: videoTitle,
+          channel_name: channelName,
+          video_id: videoId,
+          tags: tags,
+          date: new Date().toISOString(),
+        };
+
+        return res.json({ success: true, data: cachedData });
       }
 
       console.log(`[SummaryController] [${requestId}] ⚠️ Summary not in cache, generating new one...`);
@@ -82,7 +108,17 @@ export class SummaryController {
       console.log(`[SummaryController] [${requestId}]    📝 Length: ${summary.length} characters`);
       console.log(`[SummaryController] [${requestId}]    ⏱️ Total time: ${generationTime}s`);
 
-      res.json({ success: true, data: { content: summary, cached: false } });
+      // Return complete Summary object to match frontend expectations
+      const completeData: Summary = {
+        content: summary,
+        title: videoTitle,
+        channel_name: channelName,
+        video_id: videoId,
+        tags: tags,
+        date: new Date().toISOString(),
+      };
+
+      res.json({ success: true, data: completeData });
     } catch (error) {
       console.error(`[SummaryController] ❌ Summary generation failed:`, error);
       next(error);

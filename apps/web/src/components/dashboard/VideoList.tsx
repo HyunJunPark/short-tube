@@ -14,6 +14,7 @@ import {
 import type { Video } from '@short-tube/types'
 import { useGenerateSummary, useSummary } from '@/hooks/useSummaries'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface VideoListProps {
   videos: Video[]
@@ -28,6 +29,7 @@ interface SummaryResult {
 function VideoItem({ video, channelTags }: { video: Video; channelTags: string[] }) {
   const { data: existingSummary } = useSummary(video.id)
   const { mutate: generateSummary, isPending } = useGenerateSummary()
+  const queryClient = useQueryClient()
   const [generatingVideoId, setGeneratingVideoId] = useState<string | null>(null)
   const [summaryResult, setSummaryResult] = useState<SummaryResult | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -38,6 +40,9 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
       { videoId, tags: channelTags },
       {
         onSuccess: (data) => {
+          // Ensure the cache is updated with the complete Summary object
+          queryClient.setQueryData(['summary', videoId], data)
+
           setSummaryResult({
             videoTitle,
             content: data.content,
