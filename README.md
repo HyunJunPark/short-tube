@@ -320,6 +320,23 @@ pip install yt-dlp
 
 ---
 
+## 💬 커밋 컨벤션
+
+프로젝트에 기여할 때는 [COMMIT_CONVENTION.md](./COMMIT_CONVENTION.md)를 참고하여 커밋 메시지를 작성해주세요.
+
+**간단한 예시:**
+```
+Feat: Add new feature description
+
+More detailed explanation of why this change was needed.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+```
+
+---
+
 ## 📝 라이선스
 
 이 프로젝트는 개인 학습 및 도구 활용 목적으로 제작되었습니다.
