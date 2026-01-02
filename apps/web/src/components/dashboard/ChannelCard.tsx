@@ -152,9 +152,16 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <TagSelector selectedTags={subscription.tags} onChange={handleTagsChange} />
-
         <Accordion type="single" collapsible>
+          <AccordionItem value="tags" className="border-none">
+            <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+              Tags ({subscription.tags.length})
+            </AccordionTrigger>
+            <AccordionContent className="pt-2">
+              <TagSelector selectedTags={subscription.tags} onChange={handleTagsChange} />
+            </AccordionContent>
+          </AccordionItem>
+
           <AccordionItem value="videos" className="border-none">
             <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
               <div className="flex items-center gap-2">
