@@ -35,13 +35,35 @@ export class VideoController {
     try {
       const subscriptions = await dataService.getSubscriptions();
       let totalVideos = 0;
+      let todayVideos = 0;
+
+      // Get today's date range (server local timezone)
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
       for (const subscription of subscriptions) {
         const videos = await dataService.getVideoCache(subscription.channel_id);
         totalVideos += videos.length;
+
+        // Count videos published today
+        for (const video of videos) {
+          if (video.published_at) {
+            const publishedDate = new Date(video.published_at);
+            if (publishedDate >= todayStart && publishedDate <= todayEnd) {
+              todayVideos++;
+            }
+          }
+        }
       }
 
-      res.json({ success: true, data: { total_videos: totalVideos } });
+      res.json({
+        success: true,
+        data: {
+          total_videos: totalVideos,
+          today_video_count: todayVideos
+        }
+      });
     } catch (error) {
       next(error);
     }

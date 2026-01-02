@@ -152,6 +152,11 @@ export interface GetVideosQuery {
   days?: number;
 }
 
+export interface VideoStatsResponse {
+  total_videos: number;
+  today_video_count: number;
+}
+
 // ========================================
 // Error Types
 // ========================================

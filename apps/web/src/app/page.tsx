@@ -19,6 +19,7 @@ export default function Home() {
   const activeChannels = subscriptions.filter((s) => s.is_active).length
   const totalSummaries = allSummaries.length
   const totalVideos = videoStats?.total_videos || 0
+  const todayVideos = videoStats?.today_video_count || 0
   const totalNewVideos = newVideosData?.totalNewVideos || 0
 
   return (
@@ -43,13 +44,13 @@ export default function Home() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Videos Monitored
+                Today Published
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalVideos}</div>
+              <div className="text-2xl font-bold">{todayVideos}</div>
               <p className="text-xs text-muted-foreground">
-                All time
+                Videos published today
               </p>
             </CardContent>
           </Card>

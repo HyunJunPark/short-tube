@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import type { Video } from '@short-tube/types'
+import type { Video, VideoStatsResponse } from '@short-tube/types'
 
 // Get videos for a channel
 export function useVideos(channelId: string, enabled = true) {
@@ -31,12 +31,12 @@ export function useRefreshVideos() {
   })
 }
 
-// Get video statistics (total videos count)
+// Get video statistics (total videos count and today's count)
 export function useVideoStats() {
   return useQuery({
     queryKey: ['videos', 'stats'],
     queryFn: async () => {
-      const response = await apiClient.get<{ total_videos: number }>('/videos/stats')
+      const response = await apiClient.get<VideoStatsResponse>('/videos/stats')
       return response.data
     },
   })
