@@ -38,16 +38,6 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
   const { data: allVideos = [], isLoading: isLoadingVideos } = useVideos(subscription.channel_id)
   const { mutate: refreshVideos, isPending: isRefreshing } = useRefreshVideos()
 
-  // Calculate 7 days ago for display purposes
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-  // Count how many videos are in the last 7 days
-  const recentVideoCount = allVideos.filter(video => {
-    const publishDate = new Date(video.published_at)
-    return publishDate >= sevenDaysAgo
-  }).length
-
   // Count videos published today
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)
@@ -165,8 +155,8 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
           <AccordionItem value="videos" className="border-none">
             <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
               <div className="flex items-center gap-2">
-                Recent Videos (Last 7 days)
-                <Badge variant="secondary">{recentVideoCount}</Badge>
+                Videos
+                <Badge variant="secondary">{allVideos.length}</Badge>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pt-2">
