@@ -48,6 +48,15 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
     return publishDate >= sevenDaysAgo
   }).length
 
+  // Count videos published today
+  const today = new Date()
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)
+  const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+  const todayVideoCount = allVideos.filter(video => {
+    const publishDate = new Date(video.published_at)
+    return publishDate >= todayStart && publishDate <= todayEnd
+  }).length
+
   const handleToggleActive = (checked: boolean) => {
     updateSubscription({
       ...subscription,
@@ -77,19 +86,21 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
   return (
     <Card className="relative">
       <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg flex items-center gap-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <CardTitle className="text-lg truncate">
               {subscription.channel_name}
-              {!subscription.is_active && (
-                <Badge variant="secondary" className="font-normal">
-                  Inactive
-                </Badge>
-              )}
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              ID: {subscription.channel_id}
-            </p>
+            {todayVideoCount > 0 && (
+              <Badge className="bg-red-500 hover:bg-red-600 shrink-0">
+                +{todayVideoCount}
+              </Badge>
+            )}
+            {!subscription.is_active && (
+              <Badge variant="secondary" className="font-normal shrink-0">
+                Inactive
+              </Badge>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
