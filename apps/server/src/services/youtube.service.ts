@@ -157,26 +157,34 @@ export class YouTubeService {
    * Get recent videos from a channel
    * Tries YouTube API first, falls back to RSS
    */
-  async getRecentVideos(channelId: string, days: number = 7): Promise<Video[]> {
+  /**
+   * Get recent videos from a channel
+   * Tries YouTube API first, falls back to RSS
+   * Returns tuple: [videos, isFromAPI] to track data source
+   */
+  async getRecentVideos(channelId: string, days: number = 7): Promise<[Video[], boolean]> {
     console.log('before getRecentVideos videos');
 
     if (this.client.isConfigured()) {
       console.log('client is configured');
       try {
         console.log('before getVideosViaAPI');
-        return await this.getVideosViaAPI(channelId, days);
+        const videos = await this.getVideosViaAPI(channelId, days);
+        return [videos, true]; // [videos, isFromAPI=true]
       } catch (error: any) {
         // If quota exceeded, fall back to RSS
         if (error.code === 403 || error.statusCode === 403) {
           console.warn('YouTube API quota exceeded, using RSS fallback');
-          return await this.getVideosViaRSS(channelId, days);
+          const videos = await this.getVideosViaRSS(channelId, days);
+          return [videos, false]; // [videos, isFromAPI=false]
         }
         throw error;
       }
     }
 
     // No API key, use RSS directly
-    return await this.getVideosViaRSS(channelId, days);
+    const videos = await this.getVideosViaRSS(channelId, days);
+    return [videos, false]; // [videos, isFromAPI=false]
   }
 
   private async getVideosViaAPI(channelId: string, days: number): Promise<Video[]> {
@@ -229,14 +237,15 @@ export class YouTubeService {
       const publishDate = new Date(publishedAt);
       if (publishDate < cutoffDate) continue;
 
+      const title = item.snippet?.title || 'Untitled';
       const duration = this.parseDuration(item.contentDetails?.duration || '');
 
-      // Filter out YouTube Shorts (< 1 minute)
-      if (this.isShort(duration)) continue;
+      // Filter out YouTube Shorts (< 1 minute or exact #shorts tag)
+      if (title.match(/#shorts\b/i)) continue;
 
       videos.push({
         id: item.id || '',
-        title: item.snippet?.title || 'Untitled',
+        title,
         published_at: publishedAt,
         has_caption: (item.contentDetails?.caption === 'true'),
         duration,
@@ -272,10 +281,15 @@ export class YouTubeService {
       const videoId = entry['yt:videoId'] || entry.id?.split(':').pop() || '';
       if (!videoId) continue;
 
+      const title = entry.title || 'Untitled';
+
+      // Filter out videos with exact #shorts tag
+      if (title.match(/#shorts\b/i)) continue;
+
       // RSS videos have incomplete metadata - no API enrichment
       videos.push({
         id: videoId,
-        title: entry.title || 'Untitled',
+        title,
         published_at: publishedAt,
         has_caption: false,
         duration: 'N/A', // Unknown from RSS - display as N/A
@@ -327,6 +341,40 @@ export class YouTubeService {
     }
 
     return false;
+  }
+
+  /**
+   * Get video metadata (duration, caption info) for a specific video ID
+   * Used to enrich RSS videos with API data
+   */
+  async getVideoMetadata(videoId: string): Promise<Partial<Video> | null> {
+    if (!this.client.isConfigured()) {
+      return null;
+    }
+
+    try {
+      const videosResponse = await this.client.getVideoDetails([videoId]);
+      const item = videosResponse.data.items?.[0];
+
+      if (!item) {
+        return null;
+      }
+
+      const duration = this.parseDuration(item.contentDetails?.duration || '');
+
+      // Filter out YouTube Shorts (< 1 minute)
+      if (this.isShort(duration)) {
+        return null;
+      }
+
+      return {
+        duration,
+        has_caption: (item.contentDetails?.caption === 'true'),
+      };
+    } catch (error) {
+      console.warn(`Failed to get metadata for video ${videoId}:`, error);
+      return null;
+    }
   }
 }
 

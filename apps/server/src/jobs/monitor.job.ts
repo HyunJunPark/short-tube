@@ -63,7 +63,7 @@ export class MonitorJob {
    */
   private async processSubscription(subscription: Subscription): Promise<void> {
     // Get recent videos (last 2 days)
-    const videos = await youtubeService.getRecentVideos(subscription.channel_id, 2);
+    const [videos] = await youtubeService.getRecentVideos(subscription.channel_id, 2);
 
     if (videos.length === 0) {
       console.log('  No recent videos found');

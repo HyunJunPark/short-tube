@@ -193,6 +193,17 @@ export class FileSummaryRepository implements ISummaryRepository {
     return briefing;
   }
 
+  async deleteByVideoId(videoId: string, tags: string[]): Promise<void> {
+    const summaries = await this.loadSummaries();
+    const tagKey = tags.length > 0 ? tags.sort().join(',') : 'none';
+    const cacheKey = `${videoId}_${tagKey}`;
+
+    if (cacheKey in summaries) {
+      delete summaries[cacheKey];
+      await this.storage.writeJSON(this.SUMMARIES_FILE, summaries);
+    }
+  }
+
   private async loadSummaries(): Promise<SummaryCache> {
     const summaries = await this.storage.readJSON<SummaryCache>(this.SUMMARIES_FILE);
     return summaries || {};

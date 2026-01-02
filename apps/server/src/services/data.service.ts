@@ -129,6 +129,10 @@ export class DataService {
     return this.summaryRepo.findBriefing(date);
   }
 
+  async deleteSummary(videoId: string, tags: string[]): Promise<void> {
+    return this.summaryRepo.deleteByVideoId(videoId, tags);
+  }
+
   // ========================================
   // Video Cache
   // ========================================

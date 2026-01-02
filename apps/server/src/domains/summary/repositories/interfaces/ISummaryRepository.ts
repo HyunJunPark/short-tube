@@ -55,4 +55,9 @@ export interface ISummaryRepository {
    * Find the daily briefing summary for a specific date
    */
   findBriefing(date: string): Promise<Summary | null>;
+
+  /**
+   * Delete a summary by video ID and tags
+   */
+  deleteByVideoId(videoId: string, tags: string[]): Promise<void>;
 }
