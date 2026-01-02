@@ -20,12 +20,22 @@ export class VideoController {
       console.log('Refreshing videos for channel:', req.params.channelId);
       const { channelId } = req.params;
       // Fetch 30 days of videos on refresh via API for complete data
-      const videos = await youtubeService.getRecentVideos(channelId, 30);
+      const newVideos = await youtubeService.getRecentVideos(channelId, 30);
 
-      // Replace entire cache with API data
-      await videoCacheRepository.replaceForChannel(channelId, videos);
+      // Get existing cached videos to preserve them
+      const cachedVideos = await dataService.getVideoCache(channelId);
 
-      res.json({ success: true, data: videos });
+      // Merge new videos with existing cache (new videos first, then existing)
+      // This prevents data loss when API quota is exceeded and RSS fallback occurs
+      const allVideos = [
+        ...newVideos.filter(nv => !cachedVideos.some(cv => cv.id === nv.id)),
+        ...cachedVideos,
+      ];
+
+      // Save merged videos to cache (preserve existing data)
+      await videoCacheRepository.saveForChannel(channelId, allVideos);
+
+      res.json({ success: true, data: allVideos });
     } catch (error) {
       next(error);
     }
