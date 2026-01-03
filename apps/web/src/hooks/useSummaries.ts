@@ -53,6 +53,9 @@ export function useGenerateSummary() {
       // Immediately update the cache with the new summary
       queryClient.setQueryData(['summary', data.video_id], data)
       
+      // Invalidate the specific summary query to trigger re-render with updated data
+      queryClient.invalidateQueries({ queryKey: ['summary', data.video_id] })
+      
       // Invalidate all summaries queries for fresh data
       queryClient.invalidateQueries({ queryKey: ['summaries'] })
     },
