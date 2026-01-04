@@ -37,6 +37,16 @@ export class YouTubeClient {
     });
   }
 
+  async getChannelByHandle(handle: string) {
+    // Remove @ prefix if present
+    const cleanHandle = handle.startsWith('@') ? handle.substring(1) : handle;
+    
+    return this.youtube.channels.list({
+      part: ['snippet', 'contentDetails'],
+      forHandle: cleanHandle,
+    });
+  }
+
   async getPlaylistItems(playlistId: string, maxResults: number = 10) {
     return this.youtube.playlistItems.list({
       part: ['snippet'],

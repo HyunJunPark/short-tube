@@ -59,15 +59,15 @@ export class YouTubeService {
       handle = urlOrHandle;
     }
 
-    // If we have a handle, search for the channel
+    // If we have a handle, use handle lookup API (more accurate than search)
     if (handle && !channelId) {
-      const searchResponse = await this.client.searchChannels(handle);
+      const handleResponse = await this.client.getChannelByHandle(handle);
 
-      if (!searchResponse.data.items || searchResponse.data.items.length === 0) {
+      if (!handleResponse.data.items || handleResponse.data.items.length === 0) {
         throw new NotFoundError('Channel not found');
       }
 
-      channelId = searchResponse.data.items[0].id?.channelId || null;
+      channelId = handleResponse.data.items[0].id || null;
     }
 
     if (!channelId) {
