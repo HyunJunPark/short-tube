@@ -17,7 +17,8 @@ export interface UserSettings {
 export interface Subscription {
   channel_id: string;
   channel_name: string;
-  tags: string[];
+  tags: string[]; // 요약 키워드
+  categories: string[]; // 채널 분류 (새로 추가)
   last_processed_video: string;
   is_active: boolean;
 }
@@ -101,6 +102,8 @@ export interface ChannelInfo {
   channel_id: string;
   channel_name: string;
   latest_video_id: string;
+  description?: string;
+  topicCategories?: string[];
 }
 
 // ========================================
@@ -183,7 +186,7 @@ export interface ServiceResponse<T> {
 }
 
 // ========================================
-// Available Tags
+// Available Tags (요약 키워드)
 // ========================================
 
 export const AVAILABLE_TAGS = [
@@ -199,6 +202,24 @@ export const AVAILABLE_TAGS = [
 ] as const;
 
 export type AvailableTag = typeof AVAILABLE_TAGS[number];
+
+// ========================================
+// Available Categories (채널 분류)
+// ========================================
+
+export const AVAILABLE_CATEGORIES = [
+  'AI 기술',
+  '프로그래밍',
+  '경제/재테크',
+  '뉴스/시사',
+  '과학',
+  '정치',
+  '비즈니스',
+  '자기계발',
+  '엔터테인먼트',
+] as const;
+
+export type AvailableCategory = typeof AVAILABLE_CATEGORIES[number];
 
 // ========================================
 // Gemini Models

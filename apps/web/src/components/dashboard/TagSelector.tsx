@@ -5,19 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { X, Plus } from 'lucide-react'
-
-const AVAILABLE_TAGS = [
-  'AI',
-  'Tech',
-  'Business',
-  'Education',
-  'Entertainment',
-  'News',
-  'Gaming',
-  'Music',
-  'Sports',
-  'Science',
-]
+import { AVAILABLE_TAGS } from '@short-tube/types'
 
 interface TagSelectorProps {
   selectedTags: string[]

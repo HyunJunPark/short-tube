@@ -24,6 +24,7 @@ import type { Subscription } from '@short-tube/types'
 import { useUpdateSubscription, useDeleteSubscription } from '@/hooks/useSubscriptions'
 import { useVideos, useRefreshVideos } from '@/hooks/useVideos'
 import { TagSelector } from './TagSelector'
+import { CategorySelector } from './CategorySelector'
 import { VideoList } from './VideoList'
 import { useState } from 'react'
 
@@ -58,6 +59,13 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
     updateSubscription({
       ...subscription,
       tags,
+    })
+  }
+
+  const handleCategoriesChange = (categories: string[]) => {
+    updateSubscription({
+      ...subscription,
+      categories,
     })
   }
 
@@ -143,6 +151,18 @@ export function ChannelCard({ subscription }: ChannelCardProps) {
 
       <CardContent className="space-y-4">
         <Accordion type="single" collapsible>
+          <AccordionItem value="categories" className="border-none">
+            <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+              Categories ({(subscription.categories || []).length})
+            </AccordionTrigger>
+            <AccordionContent className="pt-2">
+              <CategorySelector
+                selectedCategories={subscription.categories || []}
+                onChange={handleCategoriesChange}
+              />
+            </AccordionContent>
+          </AccordionItem>
+
           <AccordionItem value="tags" className="border-none">
             <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
               Tags ({subscription.tags.length})

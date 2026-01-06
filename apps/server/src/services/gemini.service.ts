@@ -1,4 +1,4 @@
-import { Summary } from '@short-tube/types';
+import { Summary, AVAILABLE_TAGS, AVAILABLE_CATEGORIES } from '@short-tube/types';
 import { GeminiClient } from '../lib/gemini-client';
 import { transcriptService } from './transcript.service';
 import { audioService } from './audio.service';
@@ -146,6 +146,60 @@ export class GeminiService {
     const briefingWithSources = `${briefingContent}\n\n---\n📺 참고한 영상:\n${sourceVideos}`;
 
     return briefingWithSources;
+  }
+
+  /**
+   * Recommend categories for a YouTube channel using AI
+   */
+  async recommendCategories(
+    channelName: string,
+    description: string,
+    topicCategories: string[]
+  ): Promise<string[]> {
+    const availableCategories = [...AVAILABLE_CATEGORIES];
+
+    const prompt = `다음 YouTube 채널을 분석하여 적절한 카테고리를 추천해주세요.
+
+채널명: ${channelName}
+채널 설명: ${description}
+YouTube 토픽: ${topicCategories.join(', ') || '없음'}
+
+사용 가능한 카테고리: ${availableCategories.join(', ')}
+
+요구사항:
+1. 위 카테고리 중에서 1-3개를 선택하세요
+2. 채널 내용과 가장 관련있는 카테고리만 선택하세요
+3. JSON 배열 형식으로만 응답하세요: ["카테고리1", "카테고리2"]
+4. 다른 텍스트는 포함하지 마세요
+
+응답:`;
+
+    try {
+      const response = await this.client.generateWithFallback(prompt);
+
+      // Try to parse JSON from response
+      const jsonMatch = response.match(/\[.*\]/s);
+      const jsonStr = jsonMatch ? jsonMatch[0] : response.trim();
+
+      const categories = JSON.parse(jsonStr);
+
+      if (!Array.isArray(categories)) {
+        console.warn('[GeminiService] AI response is not an array:', response);
+        return [];
+      }
+
+      // Filter to only include valid categories
+      const validCategories = categories.filter((c): c is typeof AVAILABLE_CATEGORIES[number] =>
+        typeof c === 'string' && (availableCategories as readonly string[]).includes(c)
+      );
+
+      console.log(`[GeminiService] Recommended categories for "${channelName}":`, validCategories);
+      return validCategories;
+    } catch (error) {
+      console.error('[GeminiService] Failed to parse AI category recommendation:', error);
+      console.error('[GeminiService] Raw response:', error);
+      return []; // Fallback to empty array
+    }
   }
 
   // ========================================

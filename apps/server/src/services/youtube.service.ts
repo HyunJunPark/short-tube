@@ -98,6 +98,8 @@ export class YouTubeService {
       channel_id: channelId,
       channel_name: channel.snippet?.title || 'Unknown',
       latest_video_id: latestVideoId,
+      description: channel.snippet?.description || '',
+      topicCategories: channel.topicDetails?.topicCategories || [],
     };
   }
 

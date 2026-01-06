@@ -32,7 +32,7 @@ export class YouTubeClient {
 
   async getChannelById(channelId: string) {
     return this.youtube.channels.list({
-      part: ['snippet', 'contentDetails'],
+      part: ['snippet', 'contentDetails', 'topicDetails'],
       id: [channelId],
     });
   }
@@ -40,9 +40,9 @@ export class YouTubeClient {
   async getChannelByHandle(handle: string) {
     // Remove @ prefix if present
     const cleanHandle = handle.startsWith('@') ? handle.substring(1) : handle;
-    
+
     return this.youtube.channels.list({
-      part: ['snippet', 'contentDetails'],
+      part: ['snippet', 'contentDetails', 'topicDetails'],
       forHandle: cleanHandle,
     });
   }

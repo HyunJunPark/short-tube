@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { dataService } from '../repositories';
 import { youtubeService } from '../services/youtube.service';
+import { geminiService } from '../services/gemini.service';
 
 export class SubscriptionController {
   async getAll(req: Request, res: Response, next: NextFunction) {
@@ -16,14 +17,29 @@ export class SubscriptionController {
     try {
       const { channelInput } = req.body;
 
-      // Get channel info
+      // Get channel info (including description and topic categories)
       const channelInfo = await youtubeService.getChannelInfo(channelInput);
 
-      // Create subscription
+      // AI category recommendation (with fallback to empty array)
+      let recommendedCategories: string[] = [];
+      try {
+        recommendedCategories = await geminiService.recommendCategories(
+          channelInfo.channel_name,
+          channelInfo.description || '',
+          channelInfo.topicCategories || []
+        );
+        console.log(`AI recommended categories for ${channelInfo.channel_name}:`, recommendedCategories);
+      } catch (error) {
+        console.warn('Failed to get AI category recommendations:', error);
+        // Continue with empty categories
+      }
+
+      // Create subscription with AI-recommended categories
       const subscription = {
         channel_id: channelInfo.channel_id,
         channel_name: channelInfo.channel_name,
-        tags: [],
+        tags: [], // 요약 키워드 (사용자가 나중에 설정)
+        categories: recommendedCategories, // AI 추천 카테고리
         last_processed_video: channelInfo.latest_video_id,
         is_active: true,
       };
