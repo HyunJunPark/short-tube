@@ -5,13 +5,25 @@ import { Plus, Loader2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { useAddSubscription, useUpdateSubscription, useDeleteSubscription } from '@/hooks/useSubscriptions'
 import { CategorySelector } from './CategorySelector'
 import { Subscription } from '@short-tube/types'
 
-export function AddChannelForm() {
+interface AddChannelDialogProps {
+  trigger?: React.ReactNode
+}
+
+export function AddChannelDialog({ trigger }: AddChannelDialogProps) {
+  const [open, setOpen] = useState(false)
   const [step, setStep] = useState<'input' | 'confirm'>('input')
   const [channelInput, setChannelInput] = useState('')
   const [currentChannel, setCurrentChannel] = useState<Subscription | null>(null)
@@ -66,27 +78,37 @@ export function AddChannelForm() {
     setChannelInput('')
     setCurrentChannel(null)
     setSelectedCategories([])
+    setOpen(false)
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Add YouTube Channel</CardTitle>
-        <CardDescription>
-          {step === 'input'
-            ? 'Enter channel URL, handle (@username), or channel ID'
-            : 'Review and adjust AI-recommended categories'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            채널 추가
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>YouTube 채널 추가</DialogTitle>
+          <DialogDescription>
+            {step === 'input'
+              ? '채널 URL, 핸들(@username), 또는 채널 ID를 입력하세요'
+              : 'AI가 추천한 카테고리를 검토하고 조정하세요'}
+          </DialogDescription>
+        </DialogHeader>
+        
         {step === 'input' ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="channel-input">Channel</Label>
+              <Label htmlFor="channel-input">채널</Label>
               <div className="flex gap-2">
                 <Input
                   id="channel-input"
-                  placeholder="https://youtube.com/@channelname or @channelname"
+                  placeholder="https://youtube.com/@channelname 또는 @channelname"
                   value={channelInput}
                   onChange={(e) => setChannelInput(e.target.value)}
                   disabled={isPending}
@@ -96,19 +118,19 @@ export function AddChannelForm() {
                   {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Adding...
+                      추가 중...
                     </>
                   ) : (
                     <>
                       <Plus className="mr-2 h-4 w-4" />
-                      Add Channel
+                      추가
                     </>
                   )}
                 </Button>
               </div>
               {isError && (
                 <p className="text-sm text-destructive">
-                  {error instanceof Error ? error.message : 'Failed to add channel'}
+                  {error instanceof Error ? error.message : '채널 추가 실패'}
                 </p>
               )}
             </div>
@@ -157,7 +179,7 @@ export function AddChannelForm() {
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }

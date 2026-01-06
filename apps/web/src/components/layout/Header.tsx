@@ -1,10 +1,11 @@
 'use client'
 
-import { Bell, Menu, X } from 'lucide-react'
+import { Bell, Menu, X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useMarkNotificationsChecked, useCheckNewVideos } from '@/hooks/useCheckNewVideos'
 import { useSubscriptions } from '@/hooks/useSubscriptions'
+import { AddChannelDialog } from '@/components/dashboard/AddChannelForm'
 import { useState, useRef, useEffect } from 'react'
 
 interface HeaderProps {
@@ -73,6 +74,16 @@ export function Header({ title, onMenuClick, notificationCount = 0 }: HeaderProp
       </div>
 
       <div className="flex items-center gap-4 relative">
+        {/* Add Channel Button */}
+        <AddChannelDialog
+          trigger={
+            <Button variant="default" size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              채널 추가
+            </Button>
+          }
+        />
+        
         <div ref={panelRef} className="relative">
           <Button
             variant="ghost"

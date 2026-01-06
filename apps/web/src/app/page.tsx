@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AddChannelForm } from '@/components/dashboard/AddChannelForm'
+
 import { ChannelCard } from '@/components/dashboard/ChannelCard'
 import { useSubscriptions } from '@/hooks/useSubscriptions'
 import { useSummaries } from '@/hooks/useSummaries'
@@ -110,9 +110,6 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Add Channel Form */}
-        <AddChannelForm />
 
         {/* Category Tabs & Channel List */}
         <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
