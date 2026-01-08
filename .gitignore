@@ -34,6 +34,12 @@ yarn-error.log*
 *.swo
 *~
 
+# AI Tools
+.serena/
+.claude/
+.mcp.json
+.npmrc
+
 # Python
 __pycache__/
 *.py[cod]
