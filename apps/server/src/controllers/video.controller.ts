@@ -62,7 +62,14 @@ export class VideoController {
       const { channelId } = req.params;
       
       // Fetch 30 days of videos on refresh via API for complete data
-      const [newVideos, isFromAPI] = await youtubeService.getRecentVideos(channelId, 30);
+      const [allNewVideos, isFromAPI] = await youtubeService.getRecentVideos(channelId, 30);
+      
+      // Filter out shorts from new videos
+      const newVideos = allNewVideos.filter(video => {
+        const isShort = video.title.match(/#shorts\b/i) || 
+          (video.duration.split(':').length === 2 && parseInt(video.duration.split(':')[0], 10) < 1);
+        return !isShort;
+      });
 
       // Get existing cached videos
       const cachedVideos = await dataService.getVideoCache(channelId);
