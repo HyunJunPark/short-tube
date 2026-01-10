@@ -9,21 +9,26 @@
  *
  * Environment variable: USE_DATABASE
  * - false (default): Use FileStorage-based repositories
- * - true: Use Supabase-based repositories
+ * - true: Use Supabase database repositories
  */
 
 import { FileStorage } from '../lib/file-storage';
 import { getSupabaseClient } from '../lib/supabase';
+
+// File-based repositories
 import { FileSubscriptionRepository } from '../domains/subscription/repositories/implementations';
 import { FileSettingsRepository } from '../domains/settings/repositories/implementations';
 import { FileSummaryRepository } from '../domains/summary/repositories/implementations';
 import { FileVideoCacheRepository } from '../domains/video-cache/repositories/implementations';
 import { NotificationLogFileStorage } from '../domains/notification-log/file-storage';
-import { SupabaseSettingsRepository } from '../domains/settings/repositories/implementations/supabase/SupabaseSettingsRepository';
-import { SupabaseSubscriptionRepository } from '../domains/subscription/repositories/implementations/supabase/SupabaseSubscriptionRepository';
-import { SupabaseSummaryRepository } from '../domains/summary/repositories/implementations/supabase/SupabaseSummaryRepository';
-import { SupabaseVideoCacheRepository } from '../domains/video-cache/repositories/implementations/supabase/SupabaseVideoCacheRepository';
-import { SupabaseNotificationLogRepository } from '../domains/notification-log/repositories/supabase/SupabaseNotificationLogRepository';
+
+// Supabase repositories
+import { SupabaseSubscriptionRepository } from '../domains/subscription/repositories/implementations';
+import { SupabaseSettingsRepository } from '../domains/settings/repositories/implementations';
+import { SupabaseSummaryRepository } from '../domains/summary/repositories/implementations';
+import { SupabaseVideoCacheRepository } from '../domains/video-cache/repositories/implementations';
+import { SupabaseNotificationLogRepository } from '../domains/notification-log/repositories/supabase';
+
 import { DataService } from '../services/data.service';
 import type { ISubscriptionRepository } from '../domains/subscription/repositories';
 import type { ISettingsRepository } from '../domains/settings/repositories';
@@ -31,12 +36,10 @@ import type { ISummaryRepository } from '../domains/summary/repositories';
 import type { IVideoCacheRepository } from '../domains/video-cache/repositories';
 import type { INotificationLogRepository } from '../domains/notification-log/repositories';
 
-// Feature flag: Use database or file storage
 const USE_DATABASE = process.env.USE_DATABASE === 'true';
 
-console.log(`[DI] Using ${USE_DATABASE ? 'Supabase' : 'File'} storage`);
+console.log(`[DI] Storage mode: ${USE_DATABASE ? 'Supabase Database' : 'File System'}`);
 
-// Initialize repositories based on feature flag
 let subscriptionRepository: ISubscriptionRepository;
 let settingsRepository: ISettingsRepository;
 let summaryRepository: ISummaryRepository;
@@ -44,10 +47,9 @@ let videoCacheRepository: IVideoCacheRepository;
 let notificationLogRepository: INotificationLogRepository;
 
 if (USE_DATABASE) {
-  // Initialize Supabase client
+  // Initialize Supabase repositories
   const supabase = getSupabaseClient();
 
-  // Initialize Supabase-based repositories
   subscriptionRepository = new SupabaseSubscriptionRepository(supabase);
   settingsRepository = new SupabaseSettingsRepository(supabase);
   summaryRepository = new SupabaseSummaryRepository(supabase);
@@ -56,10 +58,9 @@ if (USE_DATABASE) {
 
   console.log('[DI] Supabase repositories initialized');
 } else {
-  // Initialize FileStorage singleton
+  // Initialize File-based repositories
   const fileStorage = new FileStorage();
 
-  // Initialize File-based repositories
   subscriptionRepository = new FileSubscriptionRepository(fileStorage);
   settingsRepository = new FileSettingsRepository(fileStorage);
   summaryRepository = new FileSummaryRepository(fileStorage);

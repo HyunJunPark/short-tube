@@ -1,18 +1,10 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-/**
- * Supabase Client Singleton
- *
- * Creates and manages a single Supabase client instance using service role authentication.
- * The service role bypasses Row Level Security (RLS) policies, allowing full database access.
- */
-
 let supabaseClient: SupabaseClient | null = null;
 
 /**
- * Get or create Supabase client instance
- * @returns SupabaseClient instance
- * @throws Error if SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables are not set
+ * Returns a singleton Supabase client instance.
+ * Initializes the client on first call using environment variables.
  */
 export function getSupabaseClient(): SupabaseClient {
   if (supabaseClient) {
@@ -37,40 +29,31 @@ export function getSupabaseClient(): SupabaseClient {
     },
   });
 
+<<<<<<< HEAD
   console.log('[Supabase] Client initialized successfully');
 
+=======
+>>>>>>> migration_superbase
   return supabaseClient;
 }
 
 /**
- * Test Supabase connection
- * @returns Promise<boolean> true if connection successful
+ * Tests the Supabase connection by attempting to query a table.
+ * Returns true if connection is successful, false otherwise.
  */
 export async function testSupabaseConnection(): Promise<boolean> {
   try {
-    const client = getSupabaseClient();
-
-    // Try to query user_settings table
-    const { data, error } = await client
-      .from('user_settings')
-      .select('id')
-      .limit(1);
-
-    if (error) {
-      console.error('[Supabase] Connection test failed:', error.message);
-      return false;
-    }
-
-    console.log('[Supabase] Connection test successful');
-    return true;
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.from('user_settings').select('id').limit(1);
+    return !error;
   } catch (error) {
-    console.error('[Supabase] Connection test error:', error);
+    console.error('Supabase connection test failed:', error);
     return false;
   }
 }
 
 /**
- * Reset Supabase client (useful for testing)
+ * Resets the Supabase client singleton (useful for testing).
  */
 export function resetSupabaseClient(): void {
   supabaseClient = null;

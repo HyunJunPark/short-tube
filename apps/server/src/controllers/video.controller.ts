@@ -1,75 +1,31 @@
 import { Request, Response, NextFunction } from 'express';
 import { dataService, notificationLogRepository, videoCacheRepository } from '../repositories';
 import { youtubeService } from '../services/youtube.service';
+import { isVideoShort } from '../utils/video.utils';
 
 export class VideoController {
-  private isVideoShort = (title: string, duration: string): boolean => {
-    // First check if title contains #shorts
-    if (title.includes('#shorts')) {
-      return true;
-    }
-
-    // Also filter by duration as a fallback (< 1 minute)
-    const parts = duration.split(':');
-
-    if (parts.length === 3) {
-      // HH:MM:SS format - not a short
-      return false;
-    }
-
-    if (parts.length === 2) {
-      // MM:SS format
-      const minutes = parseInt(parts[0], 10);
-      return minutes < 1;
-    }
-
-    // N/A or unknown - treat as non-short to preserve
-    return false;
-  };
-
-  async getByChannel(req: Request, res: Response, next: NextFunction) {
+  getByChannel = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
 
-      // Return cache filtered to exclude shorts
-      const cached = await dataService.getVideoCache(channelId);
-      const filtered = cached.filter(video => {
-        // Check if title contains exact #shorts tag
-        if (video.title.match(/#shorts\b/i)) {
-          return false;
-        }
-
-        // Check if duration is < 1 minute
-        const parts = video.duration.split(':');
-        if (parts.length === 2) {
-          const minutes = parseInt(parts[0], 10);
-          if (minutes < 1) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-      res.json({ success: true, data: filtered, cached: true });
+      // Return all cached videos (including shorts)
+      const cachedVideos = await dataService.getVideoCache(channelId);
+      res.json({ success: true, data: cachedVideos, cached: true });
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async refresh(req: Request, res: Response, next: NextFunction) {
+  refresh = async (req: Request, res: Response, next: NextFunction) => {
     try {
       console.log('Refreshing videos for channel:', req.params.channelId);
       const { channelId } = req.params;
-      
+
       // Fetch 30 days of videos on refresh via API for complete data
       const [allNewVideos, isFromAPI] = await youtubeService.getRecentVideos(channelId, 30);
-      
-      // Filter out shorts from new videos
-      const newVideos = allNewVideos.filter(video => {
-        const isShort = video.title.match(/#shorts\b/i) || 
-          (video.duration.split(':').length === 2 && parseInt(video.duration.split(':')[0], 10) < 1);
-        return !isShort;
-      });
+
+      // Use all videos (including shorts)
+      const newVideos = allNewVideos;
 
       // Get existing cached videos
       const cachedVideos = await dataService.getVideoCache(channelId);
@@ -78,72 +34,10 @@ export class VideoController {
 
       if (isFromAPI) {
         // API success: Merge API data with cached data
-        // For videos in both API and cache: use API version (complete metadata)
-        // For videos only in cache: enrich with API metadata if available, preserve if not
-        const newVideoIds = new Set(newVideos.map(v => v.id));
-        const preservedVideos = cachedVideos.filter(cv => !newVideoIds.has(cv.id));
-        
-        // Track videos that were updated with enriched metadata
-        const enrichedVideoIds = new Set<string>();
-        
-        // Try to enrich preserved videos with API metadata
-        const enrichedPreserved: typeof newVideos = [];
-        
-        for (const cachedVideo of preservedVideos) {
-          // Skip shorts (title contains exact #shorts tag or duration < 1 minute)
-          const isShort = cachedVideo.title.match(/#shorts\b/i) || 
-            (cachedVideo.duration.split(':').length === 2 && parseInt(cachedVideo.duration.split(':')[0], 10) < 1);
-          if (isShort) {
-            continue;
-          }
-          
-          // Check if this video might be enrichable from API
-          // (only if it's from RSS and has incomplete metadata)
-          if (cachedVideo.source === 'rss' && cachedVideo.duration === 'N/A') {
-            // Try to get metadata from API for this specific video
-            try {
-              const videoDetails = await youtubeService.getVideoMetadata(cachedVideo.id);
-              if (videoDetails) {
-                // Found metadata, update the video
-                enrichedPreserved.push({
-                  ...cachedVideo,
-                  ...videoDetails,
-                  source: 'api' as const, // Update source since we got API data
-                } as typeof newVideos[0]);
-                enrichedVideoIds.add(cachedVideo.id);
-                continue;
-              }
-            } catch (error) {
-              console.warn(`Could not enrich video ${cachedVideo.id}:`, error);
-              // Fall through to preserve as-is
-            }
-          }
-          
-          enrichedPreserved.push(cachedVideo);
-        }
-        
-        finalVideos = [...newVideos, ...enrichedPreserved];
-        await videoCacheRepository.replaceForChannel(channelId, finalVideos);
-        
-        // Invalidate summaries for videos that were updated with new metadata
-        // This allows MonitorJob to regenerate summaries with updated metadata
-        const subscription = await dataService.getSubscriptionById(channelId);
-        if (subscription) {
-          for (const videoId of enrichedVideoIds) {
-            await dataService.deleteSummary(videoId, subscription.tags);
-          }
-          // Also invalidate summaries for new API videos (from newVideos)
-          // to ensure they get fresh summaries with complete metadata
-          for (const video of newVideos) {
-            await dataService.deleteSummary(video.id, subscription.tags);
-          }
-        }
+        finalVideos = await this.mergeWithAPIData(channelId, newVideos, cachedVideos);
       } else {
         // API failed, RSS fallback: Keep existing cache, only add new RSS videos
-        finalVideos = [
-          ...newVideos.filter(nv => !cachedVideos.some(cv => cv.id === nv.id)),
-          ...cachedVideos,
-        ];
+        finalVideos = this.mergeWithRSSData(newVideos, cachedVideos);
         await videoCacheRepository.saveForChannel(channelId, finalVideos);
       }
 
@@ -151,9 +45,75 @@ export class VideoController {
     } catch (error) {
       next(error);
     }
+  };
+
+
+  /**
+   * Merge new API videos with cached videos
+   * - For videos in both API and cache: use API version (complete metadata)
+   * - For videos only in cache: enrich with API metadata if available
+   */
+  private async mergeWithAPIData(
+    channelId: string,
+    newVideos: any[],
+    cachedVideos: any[]
+  ): Promise<any[]> {
+    const newVideoIds = new Set(newVideos.map(v => v.id));
+    const preservedVideos = cachedVideos.filter(cv => !newVideoIds.has(cv.id));
+
+    // Try to enrich preserved videos with API metadata
+    const enrichedPreserved = await this.enrichVideosWithAPI(preservedVideos);
+
+    const finalVideos = [...newVideos, ...enrichedPreserved];
+    await videoCacheRepository.saveForChannel(channelId, finalVideos);
+
+    return finalVideos;
   }
 
-  async getStats(_req: Request, res: Response, next: NextFunction) {
+  /**
+   * Enrich incomplete videos with API metadata
+   * - Only enriches videos from RSS with incomplete metadata (duration === 'N/A')
+   */
+  private async enrichVideosWithAPI(videos: any[]): Promise<any[]> {
+    const enrichedVideos: any[] = [];
+
+    for (const cachedVideo of videos) {
+      // Check if this video needs enrichment
+      if (cachedVideo.source === 'rss' && cachedVideo.duration === 'N/A') {
+        try {
+          const videoDetails = await youtubeService.getVideoMetadata(cachedVideo.id);
+          if (videoDetails) {
+            // Found metadata, update the video
+            enrichedVideos.push({
+              ...cachedVideo,
+              ...videoDetails,
+              source: 'api' as const,
+            });
+            continue;
+          }
+        } catch (error) {
+          console.warn(`Could not enrich video ${cachedVideo.id}:`, error);
+          // Fall through to preserve as-is
+        }
+      }
+
+      enrichedVideos.push(cachedVideo);
+    }
+
+    return enrichedVideos;
+  }
+
+  /**
+   * Merge RSS videos with cached videos (fallback when API fails)
+   */
+  private mergeWithRSSData(newVideos: any[], cachedVideos: any[]): any[] {
+    return [
+      ...newVideos.filter(nv => !cachedVideos.some(cv => cv.id === nv.id)),
+      ...cachedVideos,
+    ];
+  }
+
+  getStats = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const subscriptions = await dataService.getSubscriptions();
       let totalVideos = 0;
@@ -189,9 +149,9 @@ export class VideoController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async checkNewVideos(_req: Request, res: Response, next: NextFunction) {
+  checkNewVideos = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const subscriptions = await dataService.getSubscriptions();
       const newVideosByChannel: Record<string, number> = {};
@@ -268,9 +228,9 @@ export class VideoController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async markNotificationsChecked(req: Request, res: Response, next: NextFunction) {
+  markNotificationsChecked = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
       const now = new Date().toISOString();
@@ -296,7 +256,7 @@ export class VideoController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 export const videoController = new VideoController();

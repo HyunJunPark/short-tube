@@ -3,13 +3,13 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { ISubscriptionRepository } from '../../interfaces';
 
 /**
- * Supabase implementation of ISubscriptionRepository
- * Uses Supabase client to persist subscriptions to subscriptions table
+ * Supabase-based implementation of ISubscriptionRepository
+ * Uses Supabase to persist subscriptions to subscriptions table
  */
 export class SupabaseSubscriptionRepository implements ISubscriptionRepository {
   private readonly TABLE_NAME = 'subscriptions';
 
-  constructor(private supabase: SupabaseClient) {}
+  constructor(private supabase: SupabaseClient) { }
 
   async findAll(): Promise<Subscription[]> {
     const { data, error } = await this.supabase
@@ -32,7 +32,6 @@ export class SupabaseSubscriptionRepository implements ISubscriptionRepository {
       .single();
 
     if (error) {
-      // PGRST116 means no rows found
       if (error.code === 'PGRST116') {
         return null;
       }
@@ -48,40 +47,27 @@ export class SupabaseSubscriptionRepository implements ISubscriptionRepository {
       .insert({
         channel_id: subscription.channel_id,
         channel_name: subscription.channel_name,
-        tags: subscription.tags || [],
-        categories: subscription.categories || [],
+        tags: subscription.tags,
+        categories: subscription.categories,
         last_processed_video: subscription.last_processed_video || '',
         is_active: subscription.is_active !== false,
       });
 
     if (error) {
-      // Handle unique constraint violation
       if (error.code === '23505') {
-        throw new Error(`Subscription with channel_id ${subscription.channel_id} already exists`);
+        throw new Error('Subscription already exists');
       }
       throw new Error(`Failed to create subscription: ${error.message}`);
     }
   }
 
   async update(channelId: string, updates: Partial<Subscription>): Promise<void> {
-    // Build update object with only provided fields
     const updateData: any = {};
-
-    if (updates.channel_name !== undefined) {
-      updateData.channel_name = updates.channel_name;
-    }
-    if (updates.tags !== undefined) {
-      updateData.tags = updates.tags;
-    }
-    if (updates.categories !== undefined) {
-      updateData.categories = updates.categories;
-    }
-    if (updates.last_processed_video !== undefined) {
-      updateData.last_processed_video = updates.last_processed_video;
-    }
-    if (updates.is_active !== undefined) {
-      updateData.is_active = updates.is_active;
-    }
+    if (updates.channel_name !== undefined) updateData.channel_name = updates.channel_name;
+    if (updates.tags !== undefined) updateData.tags = updates.tags;
+    if (updates.categories !== undefined) updateData.categories = updates.categories;
+    if (updates.last_processed_video !== undefined) updateData.last_processed_video = updates.last_processed_video;
+    if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
 
     const { error } = await this.supabase
       .from(this.TABLE_NAME)
@@ -123,9 +109,6 @@ export class SupabaseSubscriptionRepository implements ISubscriptionRepository {
     return (data || []).map(row => this.mapToSubscription(row));
   }
 
-  /**
-   * Map database row to Subscription domain type
-   */
   private mapToSubscription(row: any): Subscription {
     return {
       channel_id: row.channel_id,

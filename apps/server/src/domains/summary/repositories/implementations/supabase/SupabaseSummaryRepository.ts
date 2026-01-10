@@ -3,44 +3,47 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { ISummaryRepository, SummaryEntity, SummaryQueryOptions } from '../../interfaces';
 
 /**
- * Supabase implementation of ISummaryRepository
- * Uses Supabase client to persist summaries to summaries table
+ * Supabase-based implementation of ISummaryRepository
+ * Uses Supabase to persist summaries to summaries table
  */
 export class SupabaseSummaryRepository implements ISummaryRepository {
   private readonly TABLE_NAME = 'summaries';
-  private readonly VIDEOS_TABLE = 'videos';
 
-  constructor(private supabase: SupabaseClient) {}
+  constructor(private supabase: SupabaseClient) { }
 
   async findByVideoId(videoId: string, tags: string[]): Promise<string | null> {
-    // Sort tags to ensure consistent ordering
     const sortedTags = [...tags].sort();
+
+    // PostgreSQL array equality via PostgREST
+    // Format: {tag1,tag2,tag3} for PostgreSQL TEXT[] type
+    const pgArrayLiteral = `{${sortedTags.join(',')}}`;
 
     const { data, error } = await this.supabase
       .from(this.TABLE_NAME)
       .select('content')
       .eq('video_id', videoId)
-      .eq('tags', sortedTags)
+      .eq('tags', pgArrayLiteral)
       .single();
 
     if (error) {
-      // PGRST116 means no rows found
       if (error.code === 'PGRST116') {
         return null;
       }
-      throw new Error(`Failed to fetch summary for video ${videoId}: ${error.message}`);
+      throw new Error(`Failed to fetch summary: ${error.message}`);
     }
 
     return data.content;
   }
 
   async findByDate(date: string): Promise<Summary[]> {
-    // Find summaries where date starts with the given date (YYYY-MM-DD)
+    const startDate = `${date}T00:00:00Z`;
+    const endDate = `${date}T23:59:59Z`;
+
     const { data, error } = await this.supabase
       .from(this.TABLE_NAME)
       .select('*')
-      .gte('date', `${date}T00:00:00Z`)
-      .lt('date', `${date}T23:59:59Z`)
+      .gte('date', startDate)
+      .lte('date', endDate)
       .not('video_id', 'like', 'BRIEFING_%')
       .order('date', { ascending: false });
 
@@ -57,11 +60,9 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
       .select('*')
       .not('video_id', 'like', 'BRIEFING_%');
 
-    // Apply search filter (full-text search on title and content)
+    // Apply search filter
     if (options?.search) {
-      const searchTerm = options.search.toLowerCase();
-      // Use OR filter for searching in title or content
-      query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`);
+      query = query.or(`title.ilike.%${options.search}%,content.ilike.%${options.search}%`);
     }
 
     // Apply channel name filter
@@ -69,70 +70,59 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
       query = query.eq('channel_name', options.channelName);
     }
 
-    // Apply date filters - need to join with videos table
+    // Date filtering (year/month/day)
     if (options?.year || options?.month || options?.day) {
-      // Get all summaries first, then filter by video published_at
+      // Fetch all matching summaries first
       const { data: allData, error: allError } = await query;
 
       if (allError) {
         throw new Error(`Failed to fetch summaries: ${allError.message}`);
       }
 
-      // Get video IDs from summaries
+      // Extract video IDs
       const videoIds = (allData || []).map(s => s.video_id);
 
       if (videoIds.length === 0) {
         return [];
       }
 
-      // Fetch videos to get published_at dates
-      const { data: videos, error: videosError } = await this.supabase
-        .from(this.VIDEOS_TABLE)
+      // Fetch video metadata for published_at
+      const { data: videos, error: videoError } = await this.supabase
+        .from('videos')
         .select('id, published_at')
         .in('id', videoIds);
 
-      if (videosError) {
-        throw new Error(`Failed to fetch video dates: ${videosError.message}`);
+      if (videoError) {
+        throw new Error(`Failed to fetch videos: ${videoError.message}`);
       }
 
-      // Create a map of video_id -> published_at
-      const videoDateMap = new Map(
-        (videos || []).map(v => [v.id, v.published_at])
-      );
+      // Create video date lookup map
+      const videoDateMap = new Map((videos || []).map(v => [v.id, v.published_at]));
 
-      // Filter summaries by date
+      // Filter by date components
       const filtered = (allData || []).filter(summary => {
         const publishedAt = videoDateMap.get(summary.video_id);
         if (!publishedAt) return false;
 
-        const publishedDate = new Date(publishedAt);
-
-        if (options.year && publishedDate.getFullYear() !== options.year) {
-          return false;
-        }
-        if (options.month && publishedDate.getMonth() + 1 !== options.month) {
-          return false;
-        }
-        if (options.day && publishedDate.getDate() !== options.day) {
-          return false;
-        }
+        const date = new Date(publishedAt);
+        if (options.year && date.getFullYear() !== options.year) return false;
+        if (options.month && date.getMonth() + 1 !== options.month) return false;
+        if (options.day && date.getDate() !== options.day) return false;
 
         return true;
       });
 
       // Sort by date descending
-      filtered.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      filtered.sort((a, b) => b.date.localeCompare(a.date));
 
       // Apply pagination
       const offset = options?.offset || 0;
       const limit = options?.limit || filtered.length;
 
-      return filtered
-        .slice(offset, offset + limit)
-        .map(row => this.mapToSummary(row));
+      return filtered.slice(offset, offset + limit).map(row => this.mapToSummary(row));
     }
 
-    // No date filtering - apply sorting and pagination to query
+    // No date filter - use database sorting
     query = query.order('date', { ascending: false });
 
     if (options?.limit) {
@@ -153,25 +143,46 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
   }
 
   async save(entity: SummaryEntity): Promise<void> {
-    // Sort tags to ensure consistent ordering
     const sortedTags = [...entity.tags].sort();
 
-    const { error } = await this.supabase
-      .from(this.TABLE_NAME)
-      .upsert({
-        video_id: entity.video_id,
-        tags: sortedTags,
-        content: entity.content,
-        title: entity.title,
-        channel_name: entity.channel_name,
-        date: entity.date,
-      }, {
-        onConflict: 'video_id,tags',
-        ignoreDuplicates: false,
-      });
+    const summaryData = {
+      video_id: entity.video_id,
+      tags: sortedTags,
+      content: entity.content,
+      title: entity.title,
+      channel_name: entity.channel_name,
+      date: entity.date,
+    };
 
-    if (error) {
-      throw new Error(`Failed to save summary: ${error.message}`);
+    // Try INSERT first
+    const { error: insertError } = await this.supabase
+      .from(this.TABLE_NAME)
+      .insert(summaryData);
+
+    if (insertError) {
+      // If unique violation, UPDATE instead
+      if (insertError.code === '23505') {
+        // PostgreSQL array equality via PostgREST
+        // Format: {tag1,tag2,tag3} for PostgreSQL TEXT[] type
+        const pgArrayLiteral = `{${sortedTags.join(',')}}`;
+
+        const { error: updateError } = await this.supabase
+          .from(this.TABLE_NAME)
+          .update({
+            content: summaryData.content,
+            title: summaryData.title,
+            channel_name: summaryData.channel_name,
+            date: summaryData.date,
+          })
+          .eq('video_id', entity.video_id)
+          .eq('tags', pgArrayLiteral);
+
+        if (updateError) {
+          throw new Error(`Failed to update summary: ${updateError.message}`);
+        }
+      } else {
+        throw new Error(`Failed to save summary: ${insertError.message}`);
+      }
     }
   }
 
@@ -185,34 +196,34 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
       .single();
 
     if (error) {
-      // PGRST116 means no rows found
       if (error.code === 'PGRST116') {
         return null;
       }
-      throw new Error(`Failed to fetch briefing for date ${date}: ${error.message}`);
+      throw new Error(`Failed to fetch briefing: ${error.message}`);
     }
 
     return this.mapToSummary(data);
   }
 
   async deleteByVideoId(videoId: string, tags: string[]): Promise<void> {
-    // Sort tags to ensure consistent ordering
     const sortedTags = [...tags].sort();
+
+    // PostgreSQL array equality via PostgREST
+    // Format: {tag1,tag2,tag3} for PostgreSQL TEXT[] type
+    // Empty array should be {} not ""
+    const pgArrayLiteral = `{${sortedTags.join(',')}}`;
 
     const { error } = await this.supabase
       .from(this.TABLE_NAME)
       .delete()
       .eq('video_id', videoId)
-      .eq('tags', sortedTags);
+      .eq('tags', pgArrayLiteral);
 
     if (error) {
-      throw new Error(`Failed to delete summary for video ${videoId}: ${error.message}`);
+      throw new Error(`Failed to delete summary: ${error.message}`);
     }
   }
 
-  /**
-   * Map database row to Summary domain type
-   */
   private mapToSummary(row: any): Summary {
     return {
       content: row.content,

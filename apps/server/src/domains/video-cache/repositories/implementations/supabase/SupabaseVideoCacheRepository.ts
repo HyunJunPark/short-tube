@@ -1,15 +1,16 @@
 import { Video } from '@short-tube/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { IVideoCacheRepository } from '../../interfaces';
+import { isVideoShort } from '../../../../../utils/video.utils';
 
 /**
- * Supabase implementation of IVideoCacheRepository
- * Uses Supabase client to persist video cache to videos table
+ * Supabase-based implementation of IVideoCacheRepository
+ * Uses Supabase to persist video cache to videos table
  */
 export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
   private readonly TABLE_NAME = 'videos';
 
-  constructor(private supabase: SupabaseClient) {}
+  constructor(private supabase: SupabaseClient) { }
 
   async findByChannel(channelId: string): Promise<Video[]> {
     const { data, error } = await this.supabase
@@ -32,7 +33,6 @@ export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
 
     const now = new Date().toISOString();
 
-    // Add cached_at timestamp to all videos
     const videosWithTimestamp = videos.map(video => ({
       id: video.id,
       channel_id: channelId,
@@ -44,8 +44,6 @@ export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
       cached_at: now,
     }));
 
-    // Upsert: Insert new videos or update existing ones
-    // Supabase upsert will handle duplicates based on primary key (video id)
     const { error } = await this.supabase
       .from(this.TABLE_NAME)
       .upsert(videosWithTimestamp, {
@@ -55,16 +53,6 @@ export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
 
     if (error) {
       throw new Error(`Failed to save videos for channel ${channelId}: ${error.message}`);
-    }
-  }
-
-  async replaceForChannel(channelId: string, videos: Video[]): Promise<void> {
-    // Delete all existing videos for this channel
-    await this.deleteForChannel(channelId);
-
-    // Insert new videos
-    if (videos.length > 0) {
-      await this.saveForChannel(channelId, videos);
     }
   }
 
@@ -79,18 +67,19 @@ export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
     }
   }
 
-  /**
-   * Map database row to Video domain type
-   */
   private mapToVideo(row: any): Video {
+    const title = row.title;
+    const duration = row.duration || 'N/A';
+
     return {
       id: row.id,
-      title: row.title,
+      title,
       published_at: row.published_at,
       has_caption: row.has_caption,
-      duration: row.duration || 'N/A',
+      duration,
       cached_at: row.cached_at,
       source: row.source || 'api',
+      is_short: isVideoShort(title, duration),
     };
   }
 }

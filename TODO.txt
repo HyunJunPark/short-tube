@@ -1,8 +1,10 @@
 new feature
-1. 채널도 카테고리화 시킬수 있도록 한다. ai, 정치, 투자
- 1.1 데일리 요약에서 카테고리 별 요약을 할 수 있도록 한다.
+1. 데일리 요약에서 카테고리 별 요약을 할 수 있도록 한다.
+2. swagger 문서를 작성한다.
 
 배포
 1. vercel
-2. render
-3. supabase
+ - node.js
+ - react
+2. supabase
+3. oauth

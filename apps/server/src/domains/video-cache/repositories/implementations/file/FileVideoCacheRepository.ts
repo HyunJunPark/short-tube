@@ -40,20 +40,7 @@ export class FileVideoCacheRepository implements IVideoCacheRepository {
     await this.storage.writeJSON(this.VIDEO_CACHE_FILE, cache);
   }
 
-  async replaceForChannel(channelId: string, videos: Video[]): Promise<void> {
-    const cache = await this.loadCache();
-    const now = new Date().toISOString();
 
-    // Add cached_at timestamp to all videos
-    const videosWithTimestamp = videos.map(video => ({
-      ...video,
-      cached_at: now,
-    }));
-
-    // Complete replacement of cache for this channel
-    cache[channelId] = videosWithTimestamp;
-    await this.storage.writeJSON(this.VIDEO_CACHE_FILE, cache);
-  }
 
   async deleteForChannel(channelId: string): Promise<void> {
     const cache = await this.loadCache();

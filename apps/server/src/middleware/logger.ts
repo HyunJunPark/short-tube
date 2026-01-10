@@ -31,7 +31,7 @@ export const logger = (req: Request, res: Response, next: NextFunction) => {
     }
     
     // 경로 파라미터 로깅
-    const paramsString = Object.keys(req.params).length > 0
+    const paramsString = req.params && Object.keys(req.params).length > 0
       ? `\n    🔗 Path params: ${JSON.stringify(req.params)}`
       : '';
     
