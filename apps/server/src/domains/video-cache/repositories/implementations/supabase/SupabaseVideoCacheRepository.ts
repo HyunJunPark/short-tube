@@ -1,6 +1,7 @@
 import { Video } from '@short-tube/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { IVideoCacheRepository } from '../../interfaces';
+import { isVideoShort } from '../../../../../utils/video.utils';
 
 /**
  * Supabase-based implementation of IVideoCacheRepository
@@ -69,14 +70,18 @@ export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
   }
 
   private mapToVideo(row: any): Video {
+    const title = row.title;
+    const duration = row.duration || 'N/A';
+
     return {
       id: row.id,
-      title: row.title,
+      title,
       published_at: row.published_at,
       has_caption: row.has_caption,
-      duration: row.duration || 'N/A',
+      duration,
       cached_at: row.cached_at,
       source: row.source || 'api',
+      is_short: isVideoShort(title, duration),
     };
   }
 }

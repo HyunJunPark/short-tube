@@ -102,6 +102,11 @@ function VideoItem({ video, channelTags }: { video: Video; channelTags: string[]
                 RSS
               </Badge>
             )}
+            {video.is_short && (
+              <Badge variant="outline" className="border-red-500 text-red-700">
+                Short
+              </Badge>
+            )}
             <Badge variant="secondary" title={video.source === 'rss' ? '영상 시간을 알 수 없음 (Refresh로 업데이트 필요)' : ''}>
               {video.duration === 'N/A' ? '영상시간 미확인' : video.duration}
             </Badge>

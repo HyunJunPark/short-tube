@@ -37,6 +37,7 @@ export interface Video {
   duration: string; // "HH:MM:SS" format or "N/A" for RSS
   cached_at?: string; // ISO 8601 format - when this video was cached
   source?: VideoSource; // 'api' or 'rss' - indicates data source
+  is_short?: boolean; // true if the video is a YouTube Short
 }
 
 // ========================================

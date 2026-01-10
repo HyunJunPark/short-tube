@@ -1,40 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { dataService, notificationLogRepository, videoCacheRepository } from '../repositories';
 import { youtubeService } from '../services/youtube.service';
+import { isVideoShort } from '../utils/video.utils';
 
 export class VideoController {
-  private isVideoShort = (title: string, duration: string): boolean => {
-    // First check if title contains #shorts
-    if (title.includes('#shorts')) {
-      return true;
-    }
-
-    // Also filter by duration as a fallback (< 1 minute)
-    const parts = duration.split(':');
-
-    if (parts.length === 3) {
-      // HH:MM:SS format - not a short
-      return false;
-    }
-
-    if (parts.length === 2) {
-      // MM:SS format
-      const minutes = parseInt(parts[0], 10);
-      return minutes < 1;
-    }
-
-    // N/A or unknown - treat as non-short to preserve
-    return false;
-  };
-
   getByChannel = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { channelId } = req.params;
 
-      // Return cache filtered to exclude shorts
+      // Return all cached videos (including shorts)
       const cachedVideos = await dataService.getVideoCache(channelId);
-      const filteredVideos = cachedVideos.filter(video => !this.isVideoShort(video.title, video.duration));
-      res.json({ success: true, data: filteredVideos, cached: true });
+      res.json({ success: true, data: cachedVideos, cached: true });
     } catch (error) {
       next(error);
     }
@@ -48,8 +24,8 @@ export class VideoController {
       // Fetch 30 days of videos on refresh via API for complete data
       const [allNewVideos, isFromAPI] = await youtubeService.getRecentVideos(channelId, 30);
 
-      // Filter out shorts from new videos
-      const newVideos = this.filterOutShorts(allNewVideos);
+      // Use all videos (including shorts)
+      const newVideos = allNewVideos;
 
       // Get existing cached videos
       const cachedVideos = await dataService.getVideoCache(channelId);
@@ -71,12 +47,6 @@ export class VideoController {
     }
   };
 
-  /**
-   * Filter out shorts from video list
-   */
-  private filterOutShorts(videos: any[]): any[] {
-    return videos.filter(video => !this.isVideoShort(video.title, video.duration));
-  }
 
   /**
    * Merge new API videos with cached videos
@@ -103,17 +73,11 @@ export class VideoController {
   /**
    * Enrich incomplete videos with API metadata
    * - Only enriches videos from RSS with incomplete metadata (duration === 'N/A')
-   * - Filters out shorts during enrichment
    */
   private async enrichVideosWithAPI(videos: any[]): Promise<any[]> {
     const enrichedVideos: any[] = [];
 
     for (const cachedVideo of videos) {
-      // Skip shorts
-      if (this.isVideoShort(cachedVideo.title, cachedVideo.duration)) {
-        continue;
-      }
-
       // Check if this video needs enrichment
       if (cachedVideo.source === 'rss' && cachedVideo.duration === 'N/A') {
         try {

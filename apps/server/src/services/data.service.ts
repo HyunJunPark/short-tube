@@ -25,7 +25,7 @@ export class DataService {
     private settingsRepo: ISettingsRepository,
     private summaryRepo: ISummaryRepository,
     private videoCacheRepo: IVideoCacheRepository
-  ) {}
+  ) { }
 
   // ========================================
   // Subscriptions

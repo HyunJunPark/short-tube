@@ -4,6 +4,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { Video, ChannelInfo } from '@short-tube/types';
 import { YouTubeClient } from '../lib/youtube-client';
 import { NotFoundError, BadRequestError } from '../utils/errors';
+import { isVideoShort } from '../utils/video.utils';
 
 export class YouTubeService {
   private client: YouTubeClient;
@@ -242,9 +243,6 @@ export class YouTubeService {
       const title = item.snippet?.title || 'Untitled';
       const duration = this.parseDuration(item.contentDetails?.duration || '');
 
-      // Filter out YouTube Shorts (< 1 minute or exact #shorts tag)
-      if (title.match(/#shorts\b/i)) continue;
-
       videos.push({
         id: item.id || '',
         title,
@@ -252,6 +250,7 @@ export class YouTubeService {
         has_caption: (item.contentDetails?.caption === 'true'),
         duration,
         source: 'api', // Track source as API
+        is_short: isVideoShort(title, duration), // Identify YouTube Shorts
       });
     }
 
@@ -285,9 +284,6 @@ export class YouTubeService {
 
       const title = entry.title || 'Untitled';
 
-      // Filter out videos with exact #shorts tag
-      if (title.match(/#shorts\b/i)) continue;
-
       // RSS videos have incomplete metadata - no API enrichment
       videos.push({
         id: videoId,
@@ -296,6 +292,7 @@ export class YouTubeService {
         has_caption: false,
         duration: 'N/A', // Unknown from RSS - display as N/A
         source: 'rss', // Track source as RSS
+        is_short: isVideoShort(title, 'N/A'), // Identify YouTube Shorts (by title only, since duration is N/A)
       });
     }
 
@@ -325,25 +322,6 @@ export class YouTubeService {
       .padStart(2, '0')}`;
   }
 
-  /**
-   * Check if video is a YouTube Short (< 1 minute)
-   */
-  private isShort(duration: string): boolean {
-    const parts = duration.split(':');
-
-    if (parts.length === 3) {
-      // HH:MM:SS format
-      return false; // Definitely not a short if it has hours
-    }
-
-    if (parts.length === 2) {
-      // MM:SS format
-      const minutes = parseInt(parts[0], 10);
-      return minutes < 1;
-    }
-
-    return false;
-  }
 
   /**
    * Get video metadata (duration, caption info) for a specific video ID
@@ -362,16 +340,15 @@ export class YouTubeService {
         return null;
       }
 
+      const title = item.snippet?.title || '';
       const duration = this.parseDuration(item.contentDetails?.duration || '');
 
-      // Filter out YouTube Shorts (< 1 minute)
-      if (this.isShort(duration)) {
-        return null;
-      }
-
       return {
+        title,
+        published_at: item.snippet?.publishedAt || new Date().toISOString(),
         duration,
         has_caption: (item.contentDetails?.caption === 'true'),
+        is_short: isVideoShort(title, duration), // Identify YouTube Shorts
       };
     } catch (error) {
       console.warn(`Failed to get metadata for video ${videoId}:`, error);
