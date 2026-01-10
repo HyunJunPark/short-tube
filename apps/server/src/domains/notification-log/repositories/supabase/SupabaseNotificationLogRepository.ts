@@ -1,6 +1,6 @@
 import { NotificationLog } from '@short-tube/types';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { INotificationLogRepository } from '../repositories';
+import { INotificationLogRepository } from '../../repositories';
 
 /**
  * Supabase-based implementation of INotificationLogRepository
