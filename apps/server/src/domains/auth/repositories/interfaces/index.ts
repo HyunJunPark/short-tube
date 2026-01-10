@@ -1,0 +1,1 @@
+export { IAuthRepository } from './IAuthRepository';

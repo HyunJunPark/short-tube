@@ -18,7 +18,9 @@ import { FileSettingsRepository } from '../domains/settings/repositories/impleme
 import { FileSummaryRepository } from '../domains/summary/repositories/implementations';
 import { FileVideoCacheRepository } from '../domains/video-cache/repositories/implementations';
 import { NotificationLogFileStorage } from '../domains/notification-log/file-storage';
+import { FileAuthRepository } from '../domains/auth/repositories/implementations';
 import { DataService } from '../services/data.service';
+import { AuthService } from '../domains/auth/services/auth.service';
 
 // Initialize FileStorage singleton
 const fileStorage = new FileStorage();
@@ -29,6 +31,7 @@ const settingsRepository = new FileSettingsRepository(fileStorage);
 const summaryRepository = new FileSummaryRepository(fileStorage);
 const videoCacheRepository = new FileVideoCacheRepository(fileStorage);
 const notificationLogRepository = new NotificationLogFileStorage();
+const authRepository = new FileAuthRepository(fileStorage);
 
 // Initialize DataService with repositories
 const dataService = new DataService(
@@ -38,6 +41,9 @@ const dataService = new DataService(
   videoCacheRepository
 );
 
+// Initialize AuthService
+const authService = new AuthService(authRepository);
+
 // Export singletons
 export {
   fileStorage,
@@ -46,7 +52,9 @@ export {
   summaryRepository,
   videoCacheRepository,
   notificationLogRepository,
+  authRepository,
   dataService,
+  authService,
 };
 
 // Export types for use in other modules
@@ -55,3 +63,4 @@ export type { ISettingsRepository } from '../domains/settings/repositories';
 export type { ISummaryRepository, SummaryEntity, SummaryQueryOptions } from '../domains/summary/repositories';
 export type { IVideoCacheRepository } from '../domains/video-cache/repositories';
 export type { INotificationLogRepository } from '../domains/notification-log/repositories';
+export type { IAuthRepository } from '../domains/auth/repositories';

@@ -1,0 +1,1 @@
+export { FileAuthRepository } from './file';

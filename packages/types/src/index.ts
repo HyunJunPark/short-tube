@@ -1,4 +1,25 @@
 // ========================================
+// User (Authentication)
+// ========================================
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  password: string; // hashed
+  created_at: string; // ISO 8601 format
+  updated_at: string; // ISO 8601 format
+}
+
+export interface UserWithoutPassword {
+  id: string;
+  username: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ========================================
 // User Settings
 // ========================================
 
@@ -109,6 +130,23 @@ export interface ChannelInfo {
 // ========================================
 // API Request/Response Types
 // ========================================
+
+// Auth endpoints
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: UserWithoutPassword;
+  token: string;
+}
 
 // Subscription endpoints
 export interface AddSubscriptionRequest {

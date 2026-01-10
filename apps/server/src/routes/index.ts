@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import authRoutes from './auth';
 import subscriptionRoutes from './subscriptions';
 import videoRoutes from './videos';
 import summaryRoutes from './summaries';
@@ -8,6 +9,7 @@ import monitorRoutes from './monitor';
 
 const router = Router();
 
+router.use('/auth', authRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/videos', videoRoutes);
 router.use('/summaries', summaryRoutes);

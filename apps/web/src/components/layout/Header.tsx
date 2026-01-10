@@ -1,12 +1,14 @@
 'use client'
 
-import { Bell, Menu, X, Plus } from 'lucide-react'
+import { Bell, Menu, X, Plus, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useMarkNotificationsChecked, useCheckNewVideos } from '@/hooks/useCheckNewVideos'
 import { useSubscriptions } from '@/hooks/useSubscriptions'
+import { useAuth } from '@/hooks/useAuth'
 import { AddChannelDialog } from '@/components/dashboard/AddChannelForm'
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 
 interface HeaderProps {
   title: string
@@ -18,6 +20,7 @@ export function Header({ title, onMenuClick, notificationCount = 0 }: HeaderProp
   const { mutate: markChecked } = useMarkNotificationsChecked()
   const { data: checkNewVideosData } = useCheckNewVideos(false)
   const { data: subscriptions } = useSubscriptions()
+  const { user, isAuthenticated, logout, isLoggingOut } = useAuth()
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -74,16 +77,51 @@ export function Header({ title, onMenuClick, notificationCount = 0 }: HeaderProp
       </div>
 
       <div className="flex items-center gap-4 relative">
-        {/* Add Channel Button */}
-        <AddChannelDialog
-          trigger={
-            <Button variant="default" size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              채널 추가
+        {/* User info and auth buttons */}
+        {isAuthenticated && user ? (
+          <>
+            {/* Add Channel Button */}
+            <AddChannelDialog
+              trigger={
+                <Button variant="default" size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  채널 추가
+                </Button>
+              }
+            />
+
+            <div className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4" />
+              <span className="hidden md:inline">{user.username}</span>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span className="hidden md:inline">
+                {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
+              </span>
             </Button>
-          }
-        />
-        
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                로그인
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="default" size="sm">
+                회원가입
+              </Button>
+            </Link>
+          </div>
+        )}
+
         <div ref={panelRef} className="relative">
           <Button
             variant="ghost"
