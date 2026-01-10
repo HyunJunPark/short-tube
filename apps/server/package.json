@@ -7,7 +7,10 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/index.js",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "db:test": "ts-node src/scripts/test-supabase-connection.ts",
+    "db:migrate": "ts-node src/scripts/migrate-to-supabase.ts",
+    "db:export": "ts-node src/scripts/export-from-supabase.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +18,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@short-tube/types": "^1.0.0",
+    "@supabase/supabase-js": "^2.90.1",
     "axios": "^1.6.5",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

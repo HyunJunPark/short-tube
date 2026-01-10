@@ -9,26 +9,65 @@
  *
  * Environment variable: USE_DATABASE
  * - false (default): Use FileStorage-based repositories
- * - true: Use Database-based repositories (when implemented)
+ * - true: Use Supabase-based repositories
  */
 
 import { FileStorage } from '../lib/file-storage';
+import { getSupabaseClient } from '../lib/supabase';
 import { FileSubscriptionRepository } from '../domains/subscription/repositories/implementations';
 import { FileSettingsRepository } from '../domains/settings/repositories/implementations';
 import { FileSummaryRepository } from '../domains/summary/repositories/implementations';
 import { FileVideoCacheRepository } from '../domains/video-cache/repositories/implementations';
 import { NotificationLogFileStorage } from '../domains/notification-log/file-storage';
+import { SupabaseSettingsRepository } from '../domains/settings/repositories/implementations/supabase/SupabaseSettingsRepository';
+import { SupabaseSubscriptionRepository } from '../domains/subscription/repositories/implementations/supabase/SupabaseSubscriptionRepository';
+import { SupabaseSummaryRepository } from '../domains/summary/repositories/implementations/supabase/SupabaseSummaryRepository';
+import { SupabaseVideoCacheRepository } from '../domains/video-cache/repositories/implementations/supabase/SupabaseVideoCacheRepository';
+import { SupabaseNotificationLogRepository } from '../domains/notification-log/repositories/supabase/SupabaseNotificationLogRepository';
 import { DataService } from '../services/data.service';
+import type { ISubscriptionRepository } from '../domains/subscription/repositories';
+import type { ISettingsRepository } from '../domains/settings/repositories';
+import type { ISummaryRepository } from '../domains/summary/repositories';
+import type { IVideoCacheRepository } from '../domains/video-cache/repositories';
+import type { INotificationLogRepository } from '../domains/notification-log/repositories';
 
-// Initialize FileStorage singleton
-const fileStorage = new FileStorage();
+// Feature flag: Use database or file storage
+const USE_DATABASE = process.env.USE_DATABASE === 'true';
 
-// Initialize File-based repositories
-const subscriptionRepository = new FileSubscriptionRepository(fileStorage);
-const settingsRepository = new FileSettingsRepository(fileStorage);
-const summaryRepository = new FileSummaryRepository(fileStorage);
-const videoCacheRepository = new FileVideoCacheRepository(fileStorage);
-const notificationLogRepository = new NotificationLogFileStorage();
+console.log(`[DI] Using ${USE_DATABASE ? 'Supabase' : 'File'} storage`);
+
+// Initialize repositories based on feature flag
+let subscriptionRepository: ISubscriptionRepository;
+let settingsRepository: ISettingsRepository;
+let summaryRepository: ISummaryRepository;
+let videoCacheRepository: IVideoCacheRepository;
+let notificationLogRepository: INotificationLogRepository;
+
+if (USE_DATABASE) {
+  // Initialize Supabase client
+  const supabase = getSupabaseClient();
+
+  // Initialize Supabase-based repositories
+  subscriptionRepository = new SupabaseSubscriptionRepository(supabase);
+  settingsRepository = new SupabaseSettingsRepository(supabase);
+  summaryRepository = new SupabaseSummaryRepository(supabase);
+  videoCacheRepository = new SupabaseVideoCacheRepository(supabase);
+  notificationLogRepository = new SupabaseNotificationLogRepository(supabase);
+
+  console.log('[DI] Supabase repositories initialized');
+} else {
+  // Initialize FileStorage singleton
+  const fileStorage = new FileStorage();
+
+  // Initialize File-based repositories
+  subscriptionRepository = new FileSubscriptionRepository(fileStorage);
+  settingsRepository = new FileSettingsRepository(fileStorage);
+  summaryRepository = new FileSummaryRepository(fileStorage);
+  videoCacheRepository = new FileVideoCacheRepository(fileStorage);
+  notificationLogRepository = new NotificationLogFileStorage();
+
+  console.log('[DI] File-based repositories initialized');
+}
 
 // Initialize DataService with repositories
 const dataService = new DataService(
@@ -40,7 +79,6 @@ const dataService = new DataService(
 
 // Export singletons
 export {
-  fileStorage,
   subscriptionRepository,
   settingsRepository,
   summaryRepository,
