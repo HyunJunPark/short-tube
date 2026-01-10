@@ -12,15 +12,9 @@ export interface IVideoCacheRepository {
 
   /**
    * Save/update video cache for a channel
-   * This will merge with existing cache, not replace it
+   * Uses upsert to merge with existing cache (update existing, insert new)
    */
   saveForChannel(channelId: string, videos: Video[]): Promise<void>;
-
-  /**
-   * Replace entire cache for a channel
-   * Used by refresh operation to fully synchronize
-   */
-  replaceForChannel(channelId: string, videos: Video[]): Promise<void>;
 
   /**
    * Delete all cached videos for a channel

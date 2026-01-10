@@ -9,7 +9,7 @@ import { IVideoCacheRepository } from '../../interfaces';
 export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
   private readonly TABLE_NAME = 'videos';
 
-  constructor(private supabase: SupabaseClient) {}
+  constructor(private supabase: SupabaseClient) { }
 
   async findByChannel(channelId: string): Promise<Video[]> {
     const { data, error } = await this.supabase
@@ -55,22 +55,7 @@ export class SupabaseVideoCacheRepository implements IVideoCacheRepository {
     }
   }
 
-  async replaceForChannel(channelId: string, videos: Video[]): Promise<void> {
-    // Delete existing videos for channel
-    const { error: deleteError } = await this.supabase
-      .from(this.TABLE_NAME)
-      .delete()
-      .eq('channel_id', channelId);
 
-    if (deleteError) {
-      throw new Error(`Failed to delete videos for channel ${channelId}: ${deleteError.message}`);
-    }
-
-    // Insert new videos
-    if (videos.length > 0) {
-      await this.saveForChannel(channelId, videos);
-    }
-  }
 
   async deleteForChannel(channelId: string): Promise<void> {
     const { error } = await this.supabase
