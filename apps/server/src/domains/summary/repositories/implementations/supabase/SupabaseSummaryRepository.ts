@@ -14,11 +14,15 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
   async findByVideoId(videoId: string, tags: string[]): Promise<string | null> {
     const sortedTags = [...tags].sort();
 
+    // PostgreSQL array equality via PostgREST
+    // Format: {tag1,tag2,tag3} for PostgreSQL TEXT[] type
+    const pgArrayLiteral = `{${sortedTags.join(',')}}`;
+
     const { data, error } = await this.supabase
       .from(this.TABLE_NAME)
       .select('content')
       .eq('video_id', videoId)
-      .eq('tags', sortedTags)
+      .eq('tags', pgArrayLiteral)
       .single();
 
     if (error) {
@@ -158,6 +162,10 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
     if (insertError) {
       // If unique violation, UPDATE instead
       if (insertError.code === '23505') {
+        // PostgreSQL array equality via PostgREST
+        // Format: {tag1,tag2,tag3} for PostgreSQL TEXT[] type
+        const pgArrayLiteral = `{${sortedTags.join(',')}}`;
+
         const { error: updateError } = await this.supabase
           .from(this.TABLE_NAME)
           .update({
@@ -167,7 +175,7 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
             date: summaryData.date,
           })
           .eq('video_id', entity.video_id)
-          .eq('tags', sortedTags);
+          .eq('tags', pgArrayLiteral);
 
         if (updateError) {
           throw new Error(`Failed to update summary: ${updateError.message}`);
@@ -200,11 +208,16 @@ export class SupabaseSummaryRepository implements ISummaryRepository {
   async deleteByVideoId(videoId: string, tags: string[]): Promise<void> {
     const sortedTags = [...tags].sort();
 
+    // PostgreSQL array equality via PostgREST
+    // Format: {tag1,tag2,tag3} for PostgreSQL TEXT[] type
+    // Empty array should be {} not ""
+    const pgArrayLiteral = `{${sortedTags.join(',')}}`;
+
     const { error } = await this.supabase
       .from(this.TABLE_NAME)
       .delete()
       .eq('video_id', videoId)
-      .eq('tags', sortedTags);
+      .eq('tags', pgArrayLiteral);
 
     if (error) {
       throw new Error(`Failed to delete summary: ${error.message}`);
