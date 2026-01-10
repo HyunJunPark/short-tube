@@ -29,11 +29,8 @@ export function getSupabaseClient(): SupabaseClient {
     },
   });
 
-<<<<<<< HEAD
   console.log('[Supabase] Client initialized successfully');
 
-=======
->>>>>>> migration_superbase
   return supabaseClient;
 }
 
